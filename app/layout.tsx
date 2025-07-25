@@ -12,6 +12,11 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
+const etBook = localFont({
+  src: "./fonts/et-book-bold-line-figures.woff",
+  variable: "--font-et-book",
+  weight: "400",
+});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -26,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${etBook.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>
