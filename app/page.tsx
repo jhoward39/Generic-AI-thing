@@ -163,9 +163,9 @@ export default function Home() {
     <div className="min-h-screen bg-[#FFFFF8]">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-5xl text-black m-4">Advanced Todo App</h1>
+          <h1 className="text-5xl text-black m-4">Smart Hierarchical Itimizer of Tasks</h1>
           <p className="text-black text-lg">
-            Task Management with Dependencies & Critical Path Analysis
+            Organize your tasks, get yout S.H.I.T together
           </p>
         </div>
 
