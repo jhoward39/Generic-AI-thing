@@ -15,6 +15,7 @@ model Todo {
   duration          Int      @default(1) // Duration in days
   earliestStartDate DateTime?
   isOnCriticalPath  Boolean  @default(false)
+  imageUrl          String?
   
   // Dependencies relationship
   dependencies     TaskDependency[] @relation("TaskDependencies")

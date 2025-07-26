@@ -82,10 +82,26 @@ export async function POST(request: Request) {
       },
     });
 
+    // Fire-and-forget image fetch: do not block response
+    (async () => {
+      const { fetchImageUrl } = await import('@/lib/pexels');
+      const img = await fetchImageUrl(todo.title);
+      if (img) {
+        try {
+            await (prisma as any).todo.update({
+              where: { id: todo.id },
+              data: { imageUrl: img },
+            });
+        } catch (_) {}
+      }
+    })();
+
     // Update scheduling for all tasks
     await updateTaskScheduling();
 
-    return NextResponse.json(todo, { status: 201 });
+    // Return the todo but intentionally omit imageUrl so the client knows the image is still loading
+    const { imageUrl: _ignore, ...rest } = todo as any;
+    return NextResponse.json(rest, { status: 201 });
   } catch (error) {
     console.error("Error creating todo:", error);
     return NextResponse.json({ error: "Error creating todo" }, { status: 500 });

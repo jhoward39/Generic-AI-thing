@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useCallback } from "react";
 
 interface Todo {
   id: number;
@@ -9,6 +10,7 @@ interface Todo {
   duration: number;
   earliestStartDate?: string;
   isOnCriticalPath: boolean;
+  imageUrl?: string | null;
   dependencies: {
     dependsOn: {
       id: number;
@@ -42,20 +44,20 @@ export default function Home() {
   const [selectedDependency, setSelectedDependency] = useState<number | null>(null);
   const [showDependencies, setShowDependencies] = useState(false);
 
-  useEffect(() => {
-    fetchTodos();
-    fetchDependencyInfo();
-  }, []);
-
-  const fetchTodos = async () => {
+  const fetchTodos = useCallback(async () => {
     try {
       const res = await fetch("/api/todos");
       const data = await res.json();
-      setTodos(data);
+      // Map tasks so that null imageUrl is treated as undefined until the async fetch completes
+      const mapped: Todo[] = data.map((t: any) => ({
+        ...t,
+        imageUrl: t.imageUrl === null ? undefined : t.imageUrl,
+      }));
+      setTodos(mapped);
     } catch (error) {
       console.error("Failed to fetch todos:", error);
     }
-  };
+  }, []);
 
   const fetchDependencyInfo = async () => {
     try {
@@ -151,6 +153,18 @@ export default function Home() {
     if (!dateString) return "";
     return new Date(dateString).toLocaleDateString();
   };
+
+  useEffect(() => {
+    fetchTodos();
+    fetchDependencyInfo();
+
+    // Poll for updates so that once imageUrl is available UI updates without manual refresh
+    const id = setInterval(() => {
+      fetchTodos();
+    }, 5000); // every 5 seconds
+
+    return () => clearInterval(id);
+  }, [fetchTodos]);
 
   return (
     <div className="min-h-screen bg-[#FFFFF8]">
@@ -294,13 +308,32 @@ export default function Home() {
             {todos.map((todo) => (
               <div
                 key={todo.id}
-                className={`p-6 rounded-lg border-2 ${
+                className={`p-6 rounded-lg border-2 flex gap-6 ${
                   todo.isOnCriticalPath ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                {/* Image column */}
+                <div className="w-40 flex-shrink-0">
+                  {todo.imageUrl === undefined && (
+                    <div className="skeleton-img w-40 h-32" />
+                  )}
+                  {todo.imageUrl === null && (
+                    <div className="w-40 h-32 flex items-center justify-center rounded-md bg-gray-100 text-gray-500">
+                      No picture found
+                    </div>
+                  )}
+                  {todo.imageUrl && (
+                    <img
+                      src={todo.imageUrl}
+                      alt={todo.title}
+                      className="w-40 h-32 object-cover rounded-md"
+                    />
+                  )}
+                </div>
+
+                {/* Details column */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
                       <h3
                         className={`text-xl font-semibold ${
                           isOverdue(todo.dueDate) ? "text-red-600" : "text-gray-800"
@@ -383,7 +416,7 @@ export default function Home() {
 
                   <button
                     onClick={() => handleDeleteTodo(todo.id)}
-                    className="ml-4 text-red-500 hover:text-red-700 transition duration-300"
+                    className="text-red-500 hover:text-red-700 transition duration-300 self-start"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -395,7 +428,6 @@ export default function Home() {
                     </svg>
                   </button>
                 </div>
-              </div>
             ))}
           </div>
 

@@ -255,6 +255,19 @@ export async function addDependency(taskId: number, dependsOnId: number): Promis
     throw new Error("A task cannot depend on itself");
   }
 
+  // Check for duplicate dependency
+  const existing = await prisma.taskDependency.findUnique({
+    where: {
+      taskId_dependsOnId: {
+        taskId,
+        dependsOnId,
+      },
+    },
+  });
+  if (existing) {
+    throw new Error("This dependency already exists");
+  }
+
   // Check for circular dependencies
   const graph = await buildDependencyGraph();
   if (hasCircularDependency(graph, taskId, dependsOnId)) {
