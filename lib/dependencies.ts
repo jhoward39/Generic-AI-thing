@@ -117,9 +117,7 @@ export function topologicalSort(graph: DependencyGraph): number[] {
   }
 
   // Calculate in-degrees
-  for (const [nodeId, dependencies] of Array.from(
-    graph.adjacencyList.entries(),
-  )) {
+  for (const [nodeId, dependencies] of Array.from(graph.adjacencyList.entries())) {
     for (const depId of dependencies) {
       inDegree.set(depId, (inDegree.get(depId) || 0) + 1);
     }
@@ -204,10 +202,7 @@ export function calculateCriticalPath(graph: DependencyGraph): {
       let minLatestStartOfDependents = Infinity;
       for (const depTaskId of dependentTasks) {
         const depLatest = latestTimes.get(depTaskId) || projectDuration;
-        minLatestStartOfDependents = Math.min(
-          minLatestStartOfDependents,
-          depLatest,
-        );
+        minLatestStartOfDependents = Math.min(minLatestStartOfDependents, depLatest);
       }
       latestStart = minLatestStartOfDependents - node.duration;
     }
@@ -245,9 +240,7 @@ export async function updateTaskScheduling(): Promise<void> {
     await prisma.todo.update({
       where: { id: taskId },
       data: {
-        earliestStartDate: new Date(
-          Date.now() + earliestStart * 24 * 60 * 60 * 1000,
-        ),
+        earliestStartDate: new Date(Date.now() + earliestStart * 24 * 60 * 60 * 1000),
         isOnCriticalPath,
       },
     });
@@ -257,20 +250,28 @@ export async function updateTaskScheduling(): Promise<void> {
 /**
  * Add a dependency between tasks
  */
-export async function addDependency(
-  taskId: number,
-  dependsOnId: number,
-): Promise<boolean> {
+export async function addDependency(taskId: number, dependsOnId: number): Promise<boolean> {
   if (taskId === dependsOnId) {
     throw new Error("A task cannot depend on itself");
+  }
+
+  // Check for duplicate dependency
+  const existing = await prisma.taskDependency.findUnique({
+    where: {
+      taskId_dependsOnId: {
+        taskId,
+        dependsOnId,
+      },
+    },
+  });
+  if (existing) {
+    throw new Error("This dependency already exists");
   }
 
   // Check for circular dependencies
   const graph = await buildDependencyGraph();
   if (hasCircularDependency(graph, taskId, dependsOnId)) {
-    throw new Error(
-      "Adding this dependency would create a circular dependency",
-    );
+    throw new Error("Adding this dependency would create a circular dependency");
   }
 
   // Add the dependency
@@ -290,10 +291,7 @@ export async function addDependency(
 /**
  * Remove a dependency between tasks
  */
-export async function removeDependency(
-  taskId: number,
-  dependsOnId: number,
-): Promise<void> {
+export async function removeDependency(taskId: number, dependsOnId: number): Promise<void> {
   await prisma.taskDependency.deleteMany({
     where: {
       taskId,
@@ -340,8 +338,7 @@ export async function getAllDependencies() {
  */
 export async function getCriticalPathInfo() {
   const graph = await buildDependencyGraph();
-  const { criticalPath, earliestTimes, latestTimes } =
-    calculateCriticalPath(graph);
+  const { criticalPath, earliestTimes, latestTimes } = calculateCriticalPath(graph);
 
   const criticalPathTasks = criticalPath.map((taskId) => {
     const node = graph.nodes.get(taskId)!;

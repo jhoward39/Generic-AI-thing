@@ -21,10 +21,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching dependency info:", error);
-    return NextResponse.json(
-      { error: "Error fetching dependency info" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Error fetching dependency info" }, { status: 500 });
   }
 }
 
@@ -52,10 +49,7 @@ export async function POST(request: Request) {
     }
 
     await addDependency(parseInt(taskId), parseInt(dependsOnId));
-    return NextResponse.json(
-      { message: "Dependency added successfully" },
-      { status: 201 },
-    );
+    return NextResponse.json({ message: "Dependency added successfully" }, { status: 201 });
   } catch (error: any) {
     console.error("Error creating dependency:", error);
     return NextResponse.json(
@@ -82,10 +76,7 @@ export async function DELETE(request: Request) {
     }
 
     await removeDependency(parseInt(taskId), parseInt(dependsOnId));
-    return NextResponse.json(
-      { message: "Dependency removed successfully" },
-      { status: 200 },
-    );
+    return NextResponse.json({ message: "Dependency removed successfully" }, { status: 200 });
   } catch (error: any) {
     console.error("Error removing dependency:", error);
     return NextResponse.json(

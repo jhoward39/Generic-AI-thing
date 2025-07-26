@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useCallback } from "react";
 
 interface Todo {
   id: number;
@@ -9,6 +10,7 @@ interface Todo {
   duration: number;
   earliestStartDate?: string;
   isOnCriticalPath: boolean;
+  imageUrl?: string | null;
   dependencies: {
     dependsOn: {
       id: number;
@@ -37,29 +39,25 @@ export default function Home() {
   const [newDueDate, setNewDueDate] = useState("");
   const [newDuration, setNewDuration] = useState("1");
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [dependencyInfo, setDependencyInfo] = useState<DependencyInfo | null>(
-    null,
-  );
+  const [dependencyInfo, setDependencyInfo] = useState<DependencyInfo | null>(null);
   const [selectedTask, setSelectedTask] = useState<number | null>(null);
-  const [selectedDependency, setSelectedDependency] = useState<number | null>(
-    null,
-  );
+  const [selectedDependency, setSelectedDependency] = useState<number | null>(null);
   const [showDependencies, setShowDependencies] = useState(false);
 
-  useEffect(() => {
-    fetchTodos();
-    fetchDependencyInfo();
-  }, []);
-
-  const fetchTodos = async () => {
+  const fetchTodos = useCallback(async () => {
     try {
       const res = await fetch("/api/todos");
       const data = await res.json();
-      setTodos(data);
+      // Map tasks so that null imageUrl is treated as undefined until the async fetch completes
+      const mapped: Todo[] = data.map((t: any) => ({
+        ...t,
+        imageUrl: t.imageUrl === null ? undefined : t.imageUrl,
+      }));
+      setTodos(mapped);
     } catch (error) {
       console.error("Failed to fetch todos:", error);
     }
-  };
+  }, []);
 
   const fetchDependencyInfo = async () => {
     try {
@@ -132,10 +130,7 @@ export default function Home() {
     }
   };
 
-  const handleRemoveDependency = async (
-    taskId: number,
-    dependsOnId: number,
-  ) => {
+  const handleRemoveDependency = async (taskId: number, dependsOnId: number) => {
     try {
       await fetch("/api/todos/dependencies", {
         method: "DELETE",
@@ -159,14 +154,24 @@ export default function Home() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  useEffect(() => {
+    fetchTodos();
+    fetchDependencyInfo();
+
+    // Poll for updates so that once imageUrl is available UI updates without manual refresh
+    const id = setInterval(() => {
+      fetchTodos();
+    }, 5000); // every 5 seconds
+
+    return () => clearInterval(id);
+  }, [fetchTodos]);
+
   return (
     <div className="min-h-screen bg-[#FFFFF8]">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-5xl text-black m-4">Advanced Todo App</h1>
-          <p className="text-black text-lg">
-            Task Management with Dependencies & Critical Path Analysis
-          </p>
+          <h1 className="text-5xl text-black m-4">Smart Hierarchical Itimizer of Tasks</h1>
+          <p className="text-black text-lg">Organize your tasks, get yout S.H.I.T together</p>
         </div>
 
         {/* Add Todo Form */}
@@ -174,9 +179,7 @@ export default function Home() {
           <h2 className="text-2xl  mb-4 text-gray-800">Add New Task</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Task Title
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Task Title</label>
               <input
                 type="text"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:border-green-900 focus:outline-none bg-transparent"
@@ -187,9 +190,7 @@ export default function Home() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Due Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
               <input
                 type="date"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:border-green-900 focus:outline-none bg-transparent"
@@ -210,10 +211,7 @@ export default function Home() {
               />
             </div>
           </div>
-          <button
-            onClick={handleAddTodo}
-            className="btn-primary mt-4 px-6 py-3"
-          >
+          <button onClick={handleAddTodo} className="btn-primary mt-4 px-6 py-3">
             Add Task
           </button>
         </div>
@@ -225,22 +223,16 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-blue-800">Total Tasks</h3>
-                <p className="text-2xl  text-blue-600">
-                  {dependencyInfo.totalTasks}
-                </p>
+                <p className="text-2xl  text-blue-600">{dependencyInfo.totalTasks}</p>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-purple-800">
-                  Critical Path Tasks
-                </h3>
+                <h3 className="font-semibold text-purple-800">Critical Path Tasks</h3>
                 <p className="text-2xl  text-purple-600">
                   {dependencyInfo.criticalPath.criticalPath.length}
                 </p>
               </div>
               <div className="bg-pink-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-pink-800">
-                  Project Duration
-                </h3>
+                <h3 className="font-semibold text-pink-800">Project Duration</h3>
                 <p className="text-2xl  text-pink-600">
                   {dependencyInfo.criticalPath.totalDuration} days
                 </p>
@@ -265,15 +257,11 @@ export default function Home() {
           {showDependencies && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Task
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Task</label>
                 <select
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   value={selectedTask || ""}
-                  onChange={(e) =>
-                    setSelectedTask(parseInt(e.target.value) || null)
-                  }
+                  onChange={(e) => setSelectedTask(parseInt(e.target.value) || null)}
                 >
                   <option value="">Select a task...</option>
                   {todos.map((todo) => (
@@ -284,15 +272,11 @@ export default function Home() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Depends On
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Depends On</label>
                 <select
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   value={selectedDependency || ""}
-                  onChange={(e) =>
-                    setSelectedDependency(parseInt(e.target.value) || null)
-                  }
+                  onChange={(e) => setSelectedDependency(parseInt(e.target.value) || null)}
                 >
                   <option value="">Select dependency...</option>
                   {todos
@@ -324,20 +308,35 @@ export default function Home() {
             {todos.map((todo) => (
               <div
                 key={todo.id}
-                className={`p-6 rounded-lg border-2 ${
-                  todo.isOnCriticalPath
-                    ? "border-red-300 bg-red-50"
-                    : "border-gray-200 bg-gray-50"
+                className={`p-6 rounded-lg border-2 flex gap-6 ${
+                  todo.isOnCriticalPath ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                {/* Image column */}
+                <div className="w-40 flex-shrink-0">
+                  {todo.imageUrl === undefined && (
+                    <div className="skeleton-img w-40 h-32" />
+                  )}
+                  {todo.imageUrl === null && (
+                    <div className="w-40 h-32 flex items-center justify-center rounded-md bg-gray-100 text-gray-500">
+                      No picture found
+                    </div>
+                  )}
+                  {todo.imageUrl && (
+                    <img
+                      src={todo.imageUrl}
+                      alt={todo.title}
+                      className="w-40 h-32 object-cover rounded-md"
+                    />
+                  )}
+                </div>
+
+                {/* Details column */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
                       <h3
                         className={`text-xl font-semibold ${
-                          isOverdue(todo.dueDate)
-                            ? "text-red-600"
-                            : "text-gray-800"
+                          isOverdue(todo.dueDate) ? "text-red-600" : "text-gray-800"
                         }`}
                       >
                         {todo.title}
@@ -356,13 +355,11 @@ export default function Home() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
                       <div>
-                        <span className="font-medium">Duration:</span>{" "}
-                        {todo.duration} days
+                        <span className="font-medium">Duration:</span> {todo.duration} days
                       </div>
                       {todo.dueDate && (
                         <div>
-                          <span className="font-medium">Due:</span>{" "}
-                          {formatDate(todo.dueDate)}
+                          <span className="font-medium">Due:</span> {formatDate(todo.dueDate)}
                         </div>
                       )}
                       {todo.earliestStartDate && (
@@ -372,17 +369,14 @@ export default function Home() {
                         </div>
                       )}
                       <div>
-                        <span className="font-medium">Created:</span>{" "}
-                        {formatDate(todo.createdAt)}
+                        <span className="font-medium">Created:</span> {formatDate(todo.createdAt)}
                       </div>
                     </div>
 
                     {/* Dependencies */}
                     {todo.dependencies.length > 0 && (
                       <div className="mt-3">
-                        <span className="text-sm font-medium text-gray-700">
-                          Depends on:
-                        </span>
+                        <span className="text-sm font-medium text-gray-700">Depends on:</span>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {todo.dependencies.map((dep, index) => (
                             <span
@@ -391,12 +385,7 @@ export default function Home() {
                             >
                               {dep.dependsOn.title}
                               <button
-                                onClick={() =>
-                                  handleRemoveDependency(
-                                    todo.id,
-                                    dep.dependsOn.id,
-                                  )
-                                }
+                                onClick={() => handleRemoveDependency(todo.id, dep.dependsOn.id)}
                                 className="ml-1 text-blue-600 hover:text-blue-800"
                               >
                                 ×
@@ -410,9 +399,7 @@ export default function Home() {
                     {/* Dependent Tasks */}
                     {todo.dependentTasks.length > 0 && (
                       <div className="mt-3">
-                        <span className="text-sm font-medium text-gray-700">
-                          Blocks:
-                        </span>
+                        <span className="text-sm font-medium text-gray-700">Blocks:</span>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {todo.dependentTasks.map((dep, index) => (
                             <span
@@ -429,14 +416,9 @@ export default function Home() {
 
                   <button
                     onClick={() => handleDeleteTodo(todo.id)}
-                    className="ml-4 text-red-500 hover:text-red-700 transition duration-300"
+                    className="text-red-500 hover:text-red-700 transition duration-300 self-start"
                   >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -446,15 +428,12 @@ export default function Home() {
                     </svg>
                   </button>
                 </div>
-              </div>
             ))}
           </div>
 
           {todos.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">
-                No tasks yet. Add your first task above!
-              </p>
+              <p className="text-gray-500 text-lg">No tasks yet. Add your first task above!</p>
             </div>
           )}
         </div>

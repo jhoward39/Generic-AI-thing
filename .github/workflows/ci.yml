@@ -2,9 +2,9 @@ name: Lint and Format Check
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   lint:
@@ -18,12 +18,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: "npm"
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm ci
 
       - name: Run ESLint
-        run: pnpm exec eslint . --ext .js,.jsx,.ts,.tsx
+        run: npm run lint:ci
+
+      - name: Run Jest tests
+        run: npm test
 
       - name: Run Prettier Check
-        run: pnpm exec prettier --check .
+        run: npm run format:check
