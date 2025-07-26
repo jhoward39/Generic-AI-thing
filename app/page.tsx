@@ -197,7 +197,7 @@ export default function Home() {
                     </div>
                     <button
                         onClick={handleAddTodo}
-                        className="mt-4 bg-gray-300 border border-gray-300 text-gray-600 px-6 py-3 rounded-lg hover:bg-green-900 hover:text-white active:bg-green-900 transition-all duration-300 ease-in-out"
+                        className="mt-4 px-6 py-3 btn-primary"
                     >
                         Add Task
                     </button>
@@ -205,7 +205,7 @@ export default function Home() {
 
                 {/* Critical Path Info */}
                 {dependencyInfo && (
-                    <div className="bg-transparent rounded-lg shadow-xl p-6 mb-8">
+                    <div className="bg-transparent rounded-lg p-6 mb-8">
                         <h2 className="text-2xl  mb-4 text-gray-800">Project Overview</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="bg-blue-50 p-4 rounded-lg">
@@ -225,12 +225,13 @@ export default function Home() {
                 )}
 
                 {/* Dependency Management */}
-                <div className="bg-transparent rounded-lg shadow-xl p-6 mb-8">
+                <div className="bg-transparent rounded-lg p-6 mb-8">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl text-gray-800">Dependency Management</h2>
                         <button
                             onClick={() => setShowDependencies(!showDependencies)}
-                            className="bg-gray-600 text-black px-4 py-2 rounded-lg hover:bg-gray-700 transition duration-300"
+                            className="px-4 py-2 btn-primary
+                            "
                         >
                             {showDependencies ? 'Hide' : 'Show'} Dependencies
                         </button>
