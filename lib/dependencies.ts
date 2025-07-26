@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { prisma } from "./prisma";
 
 export interface TaskNode {
   id: number;
@@ -34,7 +34,7 @@ export async function buildDependencyGraph(): Promise<DependencyGraph> {
   for (const todo of todos) {
     const dependencies = todo.dependencies.map((dep: any) => dep.dependsOnId);
     const dependentTasks = todo.dependentTasks.map((dep: any) => dep.taskId);
-    
+
     nodes.set(todo.id, {
       id: todo.id,
       title: todo.title,
@@ -58,7 +58,7 @@ export async function buildDependencyGraph(): Promise<DependencyGraph> {
 export function hasCircularDependency(
   graph: DependencyGraph,
   newTaskId: number,
-  newDependencyId: number
+  newDependencyId: number,
 ): boolean {
   // Create a temporary graph with the new dependency
   const tempAdjacencyList = new Map(graph.adjacencyList);
@@ -72,7 +72,7 @@ export function hasCircularDependency(
     if (recursionStack.has(nodeId)) {
       return true; // Cycle detected
     }
-    
+
     if (visited.has(nodeId)) {
       return false;
     }
@@ -117,7 +117,9 @@ export function topologicalSort(graph: DependencyGraph): number[] {
   }
 
   // Calculate in-degrees
-  for (const [nodeId, dependencies] of Array.from(graph.adjacencyList.entries())) {
+  for (const [nodeId, dependencies] of Array.from(
+    graph.adjacencyList.entries(),
+  )) {
     for (const depId of dependencies) {
       inDegree.set(depId, (inDegree.get(depId) || 0) + 1);
     }
@@ -139,7 +141,7 @@ export function topologicalSort(graph: DependencyGraph): number[] {
     for (const depId of dependencies) {
       const newInDegree = (inDegree.get(depId) || 0) - 1;
       inDegree.set(depId, newInDegree);
-      
+
       if (newInDegree === 0) {
         queue.push(depId);
       }
@@ -160,19 +162,19 @@ export function calculateCriticalPath(graph: DependencyGraph): {
   const sortedNodes = topologicalSort(graph);
   const earliestTimes = new Map<number, number>();
   const latestTimes = new Map<number, number>();
-  
+
   // Forward pass - calculate earliest start times
   for (const nodeId of sortedNodes) {
     const node = graph.nodes.get(nodeId)!;
     let earliestStart = 0;
-    
+
     const dependencies = graph.adjacencyList.get(nodeId) || [];
     for (const depId of dependencies) {
       const depEarliest = earliestTimes.get(depId) || 0;
       const depNode = graph.nodes.get(depId)!;
       earliestStart = Math.max(earliestStart, depEarliest + depNode.duration);
     }
-    
+
     earliestTimes.set(nodeId, earliestStart);
   }
 
@@ -187,7 +189,7 @@ export function calculateCriticalPath(graph: DependencyGraph): {
   // Backward pass - calculate latest start times
   for (const nodeId of [...sortedNodes].reverse()) {
     const node = graph.nodes.get(nodeId)!;
-    
+
     // Find dependent tasks
     const dependentTasks: number[] = [];
     for (const [taskId, deps] of Array.from(graph.adjacencyList.entries())) {
@@ -195,18 +197,21 @@ export function calculateCriticalPath(graph: DependencyGraph): {
         dependentTasks.push(taskId);
       }
     }
-    
+
     let latestStart = projectDuration - node.duration;
-    
+
     if (dependentTasks.length > 0) {
       let minLatestStartOfDependents = Infinity;
       for (const depTaskId of dependentTasks) {
         const depLatest = latestTimes.get(depTaskId) || projectDuration;
-        minLatestStartOfDependents = Math.min(minLatestStartOfDependents, depLatest);
+        minLatestStartOfDependents = Math.min(
+          minLatestStartOfDependents,
+          depLatest,
+        );
       }
       latestStart = minLatestStartOfDependents - node.duration;
     }
-    
+
     latestTimes.set(nodeId, latestStart);
   }
 
@@ -215,8 +220,9 @@ export function calculateCriticalPath(graph: DependencyGraph): {
   for (const nodeId of Array.from(graph.nodes.keys())) {
     const earliest = earliestTimes.get(nodeId) || 0;
     const latest = latestTimes.get(nodeId) || 0;
-    
-    if (Math.abs(earliest - latest) < 0.001) { // Account for floating point precision
+
+    if (Math.abs(earliest - latest) < 0.001) {
+      // Account for floating point precision
       criticalPath.push(nodeId);
     }
   }
@@ -230,16 +236,18 @@ export function calculateCriticalPath(graph: DependencyGraph): {
 export async function updateTaskScheduling(): Promise<void> {
   const graph = await buildDependencyGraph();
   const { criticalPath, earliestTimes } = calculateCriticalPath(graph);
-  
+
   // Update all tasks with calculated values
   for (const [taskId, node] of Array.from(graph.nodes.entries())) {
     const earliestStart = earliestTimes.get(taskId) || 0;
     const isOnCriticalPath = criticalPath.includes(taskId);
-    
+
     await prisma.todo.update({
       where: { id: taskId },
       data: {
-        earliestStartDate: new Date(Date.now() + earliestStart * 24 * 60 * 60 * 1000),
+        earliestStartDate: new Date(
+          Date.now() + earliestStart * 24 * 60 * 60 * 1000,
+        ),
         isOnCriticalPath,
       },
     });
@@ -249,15 +257,20 @@ export async function updateTaskScheduling(): Promise<void> {
 /**
  * Add a dependency between tasks
  */
-export async function addDependency(taskId: number, dependsOnId: number): Promise<boolean> {
+export async function addDependency(
+  taskId: number,
+  dependsOnId: number,
+): Promise<boolean> {
   if (taskId === dependsOnId) {
-    throw new Error('A task cannot depend on itself');
+    throw new Error("A task cannot depend on itself");
   }
 
   // Check for circular dependencies
   const graph = await buildDependencyGraph();
   if (hasCircularDependency(graph, taskId, dependsOnId)) {
-    throw new Error('Adding this dependency would create a circular dependency');
+    throw new Error(
+      "Adding this dependency would create a circular dependency",
+    );
   }
 
   // Add the dependency
@@ -270,14 +283,17 @@ export async function addDependency(taskId: number, dependsOnId: number): Promis
 
   // Update scheduling
   await updateTaskScheduling();
-  
+
   return true;
 }
 
 /**
  * Remove a dependency between tasks
  */
-export async function removeDependency(taskId: number, dependsOnId: number): Promise<void> {
+export async function removeDependency(
+  taskId: number,
+  dependsOnId: number,
+): Promise<void> {
   await prisma.taskDependency.deleteMany({
     where: {
       taskId,
@@ -324,9 +340,10 @@ export async function getAllDependencies() {
  */
 export async function getCriticalPathInfo() {
   const graph = await buildDependencyGraph();
-  const { criticalPath, earliestTimes, latestTimes } = calculateCriticalPath(graph);
-  
-  const criticalPathTasks = criticalPath.map(taskId => {
+  const { criticalPath, earliestTimes, latestTimes } =
+    calculateCriticalPath(graph);
+
+  const criticalPathTasks = criticalPath.map((taskId) => {
     const node = graph.nodes.get(taskId)!;
     return {
       id: taskId,
@@ -340,10 +357,12 @@ export async function getCriticalPathInfo() {
 
   return {
     criticalPath: criticalPathTasks,
-    totalDuration: Math.max(...Array.from(earliestTimes.values()).map((start, idx) => {
-      const taskId = Array.from(graph.nodes.keys())[idx];
-      const node = graph.nodes.get(taskId)!;
-      return start + node.duration;
-    })),
+    totalDuration: Math.max(
+      ...Array.from(earliestTimes.values()).map((start, idx) => {
+        const taskId = Array.from(graph.nodes.keys())[idx];
+        const node = graph.nodes.get(taskId)!;
+        return start + node.duration;
+      }),
+    ),
   };
-} 
+}

@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { updateTaskScheduling } from '@/lib/dependencies';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { updateTaskScheduling } from "@/lib/dependencies";
 
 interface Params {
   params: {
@@ -11,7 +11,7 @@ interface Params {
 export async function DELETE(request: Request, { params }: Params) {
   const id = parseInt(params.id);
   if (isNaN(id)) {
-    return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
   try {
@@ -22,8 +22,8 @@ export async function DELETE(request: Request, { params }: Params) {
     // Update scheduling after deletion
     await updateTaskScheduling();
 
-    return NextResponse.json({ message: 'Todo deleted' }, { status: 200 });
+    return NextResponse.json({ message: "Todo deleted" }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: 'Error deleting todo' }, { status: 500 });
+    return NextResponse.json({ error: "Error deleting todo" }, { status: 500 });
   }
 }
