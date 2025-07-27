@@ -8,6 +8,30 @@ interface Params {
   };
 }
 
+export async function PATCH(request: Request, { params }: Params) {
+  const id = parseInt(params.id);
+  if (isNaN(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+
+  try {
+    const body = await request.json();
+    const { dueDate } = body;
+
+    const updatedTodo = await prisma.todo.update({
+      where: { id },
+      data: { dueDate: dueDate ? new Date(dueDate) : null },
+    });
+
+    // Update scheduling after due date change
+    await updateTaskScheduling();
+
+    return NextResponse.json(updatedTodo, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: "Error updating todo" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request, { params }: Params) {
   const id = parseInt(params.id);
   if (isNaN(id)) {
