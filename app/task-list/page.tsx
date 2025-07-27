@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useTheme } from "../layout";
+import CustomCalendar from "../components/CustomCalendar";
+import TaskModal from "../components/TaskModal";
 
 interface Todo {
   id: number;
@@ -13,6 +15,7 @@ interface Todo {
   earliestStartDate?: string;
   isOnCriticalPath: boolean;
   imageUrl?: string | null;
+  done?: boolean;
   dependencies: {
     dependsOn: {
       id: number;
@@ -30,7 +33,7 @@ interface Todo {
 export default function TaskListPage() {
   const { isDark } = useTheme();
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [sortKey, setSortKey] = useState<"createdAt" | "dueDate" | "duration">("createdAt");
+  const [sortKey, setSortKey] = useState<"title" | "dueDate" | "duration" | "earliestStartDate">("dueDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Add-task form state
@@ -43,6 +46,13 @@ export default function TaskListPage() {
   const [selectedTask, setSelectedTask] = useState<number | null>(null);
   const [selectedDependency, setSelectedDependency] = useState<number | null>(null);
   const [showDependencies, setShowDependencies] = useState(false);
+
+  // Modal state
+  const [selectedTodoForModal, setSelectedTodoForModal] = useState<Todo | null>(null);
+
+  // Custom selectors state
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showOrderDropdown, setShowOrderDropdown] = useState(false);
 
   // Flag indicating whether any images are still being fetched
   const hasPendingImages = useMemo(
@@ -95,6 +105,18 @@ export default function TaskListPage() {
     return () => clearInterval(id);
   }, [hasPendingImages, fetchTodos]);
 
+  // Handle column header clicks for sorting
+  const handleSort = (key: "title" | "dueDate" | "duration" | "earliestStartDate") => {
+    if (sortKey === key) {
+      // Toggle order if same column
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Set new column with default order
+      setSortKey(key);
+      setSortOrder("asc");
+    }
+  };
+
   // Add new todo
   const handleAddTodo = async () => {
     if (!newTodo.trim()) return;
@@ -144,7 +166,15 @@ export default function TaskListPage() {
   // Sorting logic
   const sortedTodos = useMemo(() => {
     const sortArr = [...todos];
-    if (sortKey === "dueDate") {
+    
+    if (sortKey === "title") {
+      sortArr.sort((a, b) => {
+        const titleA = a.title.toLowerCase();
+        const titleB = b.title.toLowerCase();
+        const diff = titleA.localeCompare(titleB);
+        return sortOrder === "asc" ? diff : -diff;
+      });
+    } else if (sortKey === "dueDate") {
       sortArr.sort((a, b) => {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
@@ -154,9 +184,14 @@ export default function TaskListPage() {
       });
     } else if (sortKey === "duration") {
       sortArr.sort((a, b) => (sortOrder === "asc" ? a.duration - b.duration : b.duration - a.duration));
-    } else {
-      // createdAt always newest first regardless of order selection
-      sortArr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else if (sortKey === "earliestStartDate") {
+      sortArr.sort((a, b) => {
+        if (!a.earliestStartDate && !b.earliestStartDate) return 0;
+        if (!a.earliestStartDate) return 1;
+        if (!b.earliestStartDate) return -1;
+        const diff = new Date(a.earliestStartDate).getTime() - new Date(b.earliestStartDate).getTime();
+        return sortOrder === "asc" ? diff : -diff;
+      });
     }
     return sortArr;
   }, [todos, sortKey, sortOrder]);
@@ -165,6 +200,11 @@ export default function TaskListPage() {
     if (!dueDate) return false;
     return new Date(dueDate) < new Date();
   };
+
+  // Count overdue tasks
+  const overdueCount = useMemo(() => {
+    return todos.filter(todo => isOverdue(todo.dueDate)).length;
+  }, [todos]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
@@ -196,12 +236,9 @@ export default function TaskListPage() {
   return (
     <div className="min-h-screen bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center my-8">
-          <h1 className="text-4xl text-gray-900 dark:text-gray-100 transition-colors duration-200">Task List</h1>
-        </div>
 
         {/* Add Todo Form */}
-        <div className="rounded-lg p-6 mb-8">
+        <div className="rounded-lg p-6">
           <h2 className="text-2xl mb-4 text-gray-800 dark:text-gray-200 transition-colors duration-200">Add New Task</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
@@ -217,11 +254,11 @@ export default function TaskListPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">Due Date</label>
-              <input
-                type="date"
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
+              <CustomCalendar
                 value={newDueDate}
-                onChange={(e) => setNewDueDate(e.target.value)}
+                onChange={(date) => setNewDueDate(date)}
+                className="w-full"
+                openDirection="down"
               />
             </div>
             <div>
@@ -235,75 +272,18 @@ export default function TaskListPage() {
               />
             </div>
           </div>
-          <button onClick={handleAddTodo} className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-lg mt-4 px-6 py-3 transition-colors duration-200">
+          <button onClick={handleAddTodo} className="border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-green-900 dark:hover:bg-blue-700 hover:text-white hover:border-green-900 dark:hover:border-blue-700 rounded-lg mt-4 px-6 py-3 transition-colors duration-200">
             Add Task
           </button>
         </div>
 
-        {/* Project Overview */}
-        {dependencyInfo && (
-          <div className="bg-transparent rounded-lg p-6 mb-8">
-            <h2 className="text-2xl mb-4 text-gray-800 dark:text-gray-200 transition-colors duration-200">Project Overview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg transition-colors duration-200">
-                <h3 className="font-medium text-blue-800 dark:text-blue-300">Total Tasks</h3>
-                <p className="text-2xl text-blue-600 dark:text-blue-400">{dependencyInfo.totalTasks}</p>
-              </div>
-              <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg transition-colors duration-200">
-                <h3 className="font-medium text-purple-800 dark:text-purple-300">Critical Path Tasks</h3>
-                <p className="text-2xl text-purple-600 dark:text-purple-400">
-                  {dependencyInfo.criticalPath.criticalPath.length}
-                </p>
-              </div>
-              <div className="bg-pink-50 dark:bg-pink-900/30 p-4 rounded-lg transition-colors duration-200">
-                <h3 className="font-medium text-pink-800 dark:text-pink-300">Project Duration</h3>
-                <p className="text-2xl text-pink-600 dark:text-pink-400">{dependencyInfo.criticalPath.totalDuration} days</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sorting Controls */}
-        <div className="flex flex-wrap justify-end gap-4 mb-4">
-          <label className="mr-2 text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200" htmlFor="sort">
-            Sort by:
-          </label>
-          <select
-            id="sort"
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as any)}
-            className="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
-          >
-            <option value="createdAt">Created (newest)</option>
-            <option value="dueDate">Due Date</option>
-            <option value="duration">Duration</option>
-          </select>
-
-          {(sortKey === "dueDate" || sortKey === "duration") && (
-            <>
-              <label className="mr-2 text-gray-700 font-medium" htmlFor="order">
-                Order:
-              </label>
-              <select
-                id="order"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as any)}
-                className="p-2 border border-gray-300 rounded-md bg-transparent"
-              >
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
-            </>
-          )}
-        </div>
-
         {/* Dependency Management */}
-        <div className="bg-transparent rounded-lg p-6 mb-8">
+        <div className="bg-transparent rounded-lg p-6 mb-2">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl text-gray-800 dark:text-gray-200 transition-colors duration-200">Dependency Management</h2>
             <button
               onClick={() => setShowDependencies(!showDependencies)}
-              className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-lg px-4 py-2 transition-colors duration-200"
+              className="border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-green-900 dark:hover:bg-blue-700 hover:text-white hover:border-green-900 dark:hover:border-blue-700 rounded-lg px-4 py-2 transition-colors duration-200"
             >
               {showDependencies ? "Hide" : "Show"} Dependencies
             </button>
@@ -347,7 +327,7 @@ export default function TaskListPage() {
                 <button
                   onClick={handleAddDependency}
                   disabled={!selectedTask || !selectedDependency}
-                  className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg w-full px-4 py-3 transition-colors duration-200"
+                  className="border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-green-900 dark:hover:bg-blue-700 hover:text-white hover:border-green-900 dark:hover:border-blue-700 disabled:bg-gray-400 disabled:text-white disabled:cursor-not-allowed disabled:border-gray-400 rounded-lg w-full px-4 py-3 transition-colors duration-200"
                 >
                   Add Dependency
                 </button>
@@ -357,136 +337,174 @@ export default function TaskListPage() {
         </div>
 
         {/* Tasks List */}
-        <div className="bg-transparent rounded-lg p-6">
+        <div className="bg-transparent rounded-lg p-4">
           {sortedTodos.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400 text-lg transition-colors duration-200">No tasks available.</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400 text-base transition-colors duration-200">No tasks available.</p>
             </div>
           )}
 
-          <div className="space-y-4">
+          {/* Compact Table View */}
+          <div className="border border-black dark:border-black rounded-lg overflow-hidden max-h-[calc(15*2.5rem)] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gray-100 dark:bg-gray-800 border-b border-black dark:border-black p-2 grid grid-cols-12 gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="col-span-1"></div> {/* Icon */}
+              <div 
+                className="col-span-4 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 px-1 py-1 rounded transition-colors flex items-center gap-1"
+                onClick={() => handleSort("title")}
+              >
+                {sortKey === "title" && (
+                  <span className="text-xs">
+                    {sortOrder === "asc" ? "▲" : "▼"}
+                  </span>
+                )}
+                Task ({todos.length})
+              </div>
+              <div 
+                className="col-span-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 px-1 py-1 rounded transition-colors flex items-center gap-1"
+                onClick={() => handleSort("dueDate")}
+              >
+                {sortKey === "dueDate" && (
+                  <span className="text-xs">
+                    {sortOrder === "asc" ? "▲" : "▼"}
+                  </span>
+                )}
+                Due Date
+                {overdueCount > 0 && (
+                  <span className="text-red-600 dark:text-red-400 ml-1">
+                    ({overdueCount} overdue)
+                  </span>
+                )}
+              </div>
+              <div 
+                className="col-span-1 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 px-1 py-1 rounded transition-colors flex items-center gap-1"
+                onClick={() => handleSort("duration")}
+              >
+                {sortKey === "duration" && (
+                  <span className="text-xs">
+                    {sortOrder === "asc" ? "▲" : "▼"}
+                  </span>
+                )}
+                Duration
+              </div>
+              <div 
+                className="col-span-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 px-1 py-1 rounded transition-colors flex items-center gap-1"
+                onClick={() => handleSort("earliestStartDate")}
+              >
+                {sortKey === "earliestStartDate" && (
+                  <span className="text-xs">
+                    {sortOrder === "asc" ? "▲" : "▼"}
+                  </span>
+                )}
+                Earliest Start
+              </div>
+              <div className="col-span-2">Status</div>
+            </div>
+
+            {/* Task Rows */}
             {sortedTodos.map((todo) => (
               <div
                 key={todo.id}
-                className={`p-6 rounded-lg border-2 flex gap-6 transition-colors duration-200 ${
+                onClick={() => setSelectedTodoForModal(todo)}
+                className={`p-2 border-b border-gray-200 dark:border-gray-700 grid grid-cols-12 gap-2 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 ${
                   todo.isOnCriticalPath 
-                    ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20" 
-                    : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                    ? "bg-red-50 dark:bg-red-900/20" 
+                    : "bg-[#FFFFF8] dark:bg-gray-900"
                 }`}
               >
-                {/* Image column */}
-                <div className="w-40 flex-shrink-0">
-                  {todo.imageUrl === undefined && <div className="skeleton-img w-40 h-32" />}
+                {/* Small Icon */}
+                <div className="col-span-1">
+                  {todo.imageUrl === undefined && <div className="w-6 h-6 rounded border border-black dark:border-black bg-gray-200 dark:bg-gray-700 animate-pulse" />}
                   {todo.imageUrl === null && (
-                    <div className="w-40 h-32 flex items-center justify-center rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors duration-200">
-                      No picture found
+                    <div className="w-6 h-6 rounded border border-black dark:border-black bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <span className="text-xs text-gray-400">?</span>
                     </div>
                   )}
                   {todo.imageUrl && (
                     <img
                       src={todo.imageUrl}
                       alt={todo.title}
-                      className="w-40 h-32 object-cover rounded-md"
+                      className="w-6 h-6 object-cover rounded border border-black dark:border-black"
                     />
                   )}
                 </div>
 
-                {/* Details column */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3
-                      className={`text-xl font-semibold transition-colors duration-200 ${
-                        isOverdue(todo.dueDate) 
-                          ? "text-red-600 dark:text-red-400" 
-                          : "text-gray-800 dark:text-gray-200"
-                      }`}
-                    >
+                {/* Task Title */}
+                <div className="col-span-4">
+                  <div className="flex items-center gap-2 min-h-[1.5rem]">
+                    <span className={`text-sm truncate ${
+                      isOverdue(todo.dueDate) 
+                        ? "text-red-600 dark:text-red-400" 
+                        : "text-gray-800 dark:text-gray-200"
+                    }`}>
                       {todo.title}
-                    </h3>
+                    </span>
                     {todo.isOnCriticalPath && (
-                      <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs ">
-                        CRITICAL PATH
-                      </span>
-                    )}
-                    {isOverdue(todo.dueDate) && (
-                      <span className="bg-red-600 text-white px-2 py-1 rounded-full text-xs ">
-                        OVERDUE
+                      <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs flex-shrink-0">
+                        CRITICAL
                       </span>
                     )}
                   </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 dark:text-gray-400 transition-colors duration-200">
-                    <div>
-                      <span className="font-medium">Duration:</span> {todo.duration} days
-                    </div>
-                    {todo.dueDate && (
-                      <div>
-                        <span className="font-medium">Due:</span> {formatDate(todo.dueDate)}
-                      </div>
-                    )}
-                    {todo.earliestStartDate && (
-                      <div>
-                        <span className="font-medium">Earliest Start:</span> {formatDate(todo.earliestStartDate)}
-                      </div>
-                    )}
-                    <div>
-                      <span className="font-medium">Created:</span> {formatDate(todo.createdAt)}
-                    </div>
-                  </div>
-
-                  {/* Dependencies */}
-                  {todo.dependencies.length > 0 && (
-                    <div className="mt-3">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">Depends on:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {todo.dependencies.map((dep, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full text-xs transition-colors duration-200"
-                          >
-                            {dep.dependsOn.title}
-                            <button
-                              onClick={() => handleRemoveDependency(todo.id, dep.dependsOn.id)}
-                              className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors duration-200"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Dependent Tasks */}
-                  {todo.dependentTasks.length > 0 && (
-                    <div className="mt-3">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">Blocks:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {todo.dependentTasks.map((dep, index) => (
-                          <span
-                            key={index}
-                            className="bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded-full text-xs transition-colors duration-200"
-                          >
-                            {dep.task.title}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                <button
-                  onClick={() => handleDeleteTodo(todo.id)}
-                  className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition duration-300 self-start"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                {/* Due Date */}
+                <div className="col-span-2">
+                  <div className="flex items-center min-h-[1.5rem]">
+                    <span className={`text-sm w-24 ${
+                      isOverdue(todo.dueDate) 
+                        ? "text-red-600 dark:text-red-400" 
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}>
+                      {todo.dueDate ? formatDate(todo.dueDate) : "No due date"}
+                    </span>
+                    <div className="flex-1 flex justify-start">
+                      {isOverdue(todo.dueDate) && (
+                        <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs whitespace-nowrap">
+                          OVERDUE
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration */}
+                <div className="col-span-1">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{todo.duration}d</span>
+                </div>
+
+                {/* Earliest Start */}
+                <div className="col-span-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {todo.earliestStartDate ? formatDate(todo.earliestStartDate) : "N/A"}
+                  </span>
+                </div>
+
+                {/* Status/Dependencies */}
+                <div className="col-span-2">
+                  {todo.dependencies.length > 0 && (
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-1 py-0.5 rounded">
+                      {todo.dependencies.length} deps
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Task Details Modal */}
+        {selectedTodoForModal && (
+          <TaskModal
+            task={selectedTodoForModal}
+            isOpen={!!selectedTodoForModal}
+            onClose={() => setSelectedTodoForModal(null)}
+            onTaskUpdate={fetchTodos}
+            onTaskDelete={(id: number) => {
+              handleDeleteTodo(id);
+              setSelectedTodoForModal(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );

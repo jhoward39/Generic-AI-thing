@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updateTaskScheduling } from "@/lib/dependencies";
+import { getDefaultDueDate } from "@/lib/dateUtils";
 
 export async function GET() {
   try {
@@ -49,12 +50,9 @@ export async function POST(request: Request) {
     const todoData: any = {
       title: title.trim(),
       duration: parseInt(duration) || 1,
+      // Always set a due date - use provided date or default to 5 business days from now
+      dueDate: dueDate ? new Date(dueDate) : getDefaultDueDate(),
     };
-
-    // Add due date if provided
-    if (dueDate) {
-      todoData.dueDate = new Date(dueDate);
-    }
 
     const todo = await prisma.todo.create({
       data: todoData,

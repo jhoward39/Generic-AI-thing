@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import VerticalTimeline from "./components/VerticalTimeline";
+import CustomCalendar from "./components/CustomCalendar";
+import TaskPieChart from "./components/TaskPieChart";
 
 interface Todo {
   id: number;
@@ -8,6 +10,8 @@ interface Todo {
   dueDate?: string | null;
   duration: number;
   imageUrl?: string | null;
+  done?: boolean;
+  isOnCriticalPath: boolean;
   dependencies: { dependsOn: { id: number } }[];
   dependentTasks: { task: { id: number } }[];
 }
@@ -21,6 +25,24 @@ interface Task {
   id: number;
   title: string;
   dueDate: string;
+  createdAt: string;
+  duration: number;
+  earliestStartDate?: string;
+  isOnCriticalPath: boolean;
+  imageUrl?: string | null;
+  done?: boolean;
+  dependencies: {
+    dependsOn: {
+      id: number;
+      title: string;
+    };
+  }[];
+  dependentTasks: {
+    task: {
+      id: number;
+      title: string;
+    };
+  }[];
 }
 
 interface Dependency {
@@ -39,6 +61,19 @@ export default function Home() {
 
   const hasPendingImages = useMemo(() => todos.some((t) => t.imageUrl === undefined), [todos]);
 
+  // Calculate overdue tasks
+  const overdueTasks = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    
+    return todos.filter(todo => {
+      if (!todo.dueDate) return false;
+      const dueDate = new Date(todo.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate < today;
+    }).length;
+  }, [todos]);
+
   const fetchTodos = useCallback(async () => {
     const res = await fetch("/api/todos");
     const data: Todo[] = await res.json();
@@ -47,52 +82,49 @@ export default function Home() {
         const prevTodo = prev.find((p) => p.id === t.id);
         if (!prevTodo && t.imageUrl === null) return { ...t, imageUrl: undefined } as Todo;
         return t;
-      }),
+      })
     );
   }, []);
 
   const fetchDependencyInfo = useCallback(async () => {
     const res = await fetch("/api/todos/dependencies");
-    if (res.ok) setDependencyInfo(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      setDependencyInfo(data);
+    }
   }, []);
 
   useEffect(() => {
     fetchTodos();
     fetchDependencyInfo();
-  }, [fetchTodos]);
+  }, [fetchTodos, fetchDependencyInfo]);
 
+  // polling while images pending
   useEffect(() => {
     if (!hasPendingImages) return;
     const id = setInterval(fetchTodos, 3000);
     return () => clearInterval(id);
   }, [hasPendingImages, fetchTodos]);
 
-  /* Handlers */
-  const handleCreateDependency = async (fromId: number, toId: number) => {
-    console.log('handleCreateDependency called with:', { fromId, toId });
-    const requestBody = { taskId: toId, dependsOnId: fromId };
-    console.log('Sending to API:', requestBody);
-    
+  const handleCreateDependency = async (fromId: number, toId: number): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch("/api/todos/dependencies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ taskId: toId, dependsOnId: fromId }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('API Error:', errorData);
-        alert(`Error creating dependency: ${errorData.error || 'Unknown error'}`);
-        return;
+        return { success: false, error: errorData.error || 'Failed to create dependency' };
       }
       
-      console.log('Dependency created successfully');
       fetchTodos();
       fetchDependencyInfo();
+      return { success: true };
     } catch (error) {
-      console.error('Network error:', error);
-      alert('Network error creating dependency');
+      console.error('Network error creating dependency:', error);
+      return { success: false, error: 'Network error occurred' };
     }
   };
 
@@ -127,9 +159,37 @@ export default function Home() {
       id: t.id,
       title: t.title,
       dueDate: t.dueDate!.split('T')[0], // Ensure YYYY-MM-DD format (strip time if present)
+      createdAt: new Date().toISOString(), // Add createdAt
+      duration: t.duration,
+      earliestStartDate: undefined, // This would come from dependency calculation
+      isOnCriticalPath: t.isOnCriticalPath, // Use actual critical path data from database
+      imageUrl: t.imageUrl,
+      done: t.done, // Add done property
+      dependencies: t.dependencies.map(dep => ({
+        dependsOn: {
+          id: dep.dependsOn.id,
+          title: todos.find(todo => todo.id === dep.dependsOn.id)?.title || 'Unknown'
+        }
+      })),
+      dependentTasks: t.dependentTasks.map(dep => ({
+        task: {
+          id: dep.task.id,
+          title: todos.find(todo => todo.id === dep.task.id)?.title || 'Unknown'
+        }
+      })),
     }));
     return transformedTasks;
   }, [todos]);
+
+  const handleDeleteTask = async (id: number) => {
+    try {
+      await fetch(`/api/todos/${id}`, { method: "DELETE" });
+      fetchTodos();
+      fetchDependencyInfo();
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+    }
+  };
 
   // Transform dependencies 
   const dependencies: Dependency[] = useMemo(() => {
@@ -142,23 +202,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#FFFFF8] dark:bg-gray-900 relative transition-colors duration-200">
-      {/* Project overview */}
+      {/* Project overview pie chart */}
       {dependencyInfo && (
-        <div className="absolute top-4 right-4 bg-[#FFFFF8] dark:bg-gray-900 p-4 z-20 transition-colors duration-200">
-          <div className="flex gap-4">
-            <div className="border border-black dark:border-gray-600 rounded p-2 bg-[#FFFFF8] dark:bg-gray-800 transition-colors duration-200">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{dependencyInfo?.totalTasks || 0}</div>
-            </div>
-            <div className="border border-black dark:border-gray-600 rounded p-2 bg-[#FFFFF8] dark:bg-gray-800 transition-colors duration-200">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Critical</div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{dependencyInfo?.criticalPath?.criticalPath?.length || 0}</div>
-            </div>
-            <div className="border border-black dark:border-gray-600 rounded p-2 bg-[#FFFFF8] dark:bg-gray-800 transition-colors duration-200">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Duration</div>
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{dependencyInfo?.criticalPath?.totalDuration || 0}d</div>
-            </div>
-          </div>
+        <div className="absolute top-4 right-4 z-20">
+          <TaskPieChart 
+            totalTasks={dependencyInfo.totalTasks}
+            overdueTasks={overdueTasks}
+          />
         </div>
       )}
 
@@ -168,6 +218,8 @@ export default function Home() {
         dependencies={dependencies}
         onTaskMove={handleMoveTask}
         onCreateDependency={handleCreateDependency}
+        onTaskUpdate={fetchTodos}
+        onTaskDelete={handleDeleteTask}
       />
 
       {/* Add task bar */}
@@ -177,20 +229,20 @@ export default function Home() {
           placeholder="add a task..."
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200"
+          className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200"
         />
-        <input
-          type="date"
+        <CustomCalendar
           value={newDueDate}
-          onChange={(e) => setNewDueDate(e.target.value)}
-          className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
+          onChange={(date) => setNewDueDate(date)}
+          className="w-32"
+          openDirection="up"
         />
         <input
           type="number"
           value={newDuration}
           onChange={(e) => setNewDuration(e.target.value)}
           min="1"
-          className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 w-16 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
+          className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 w-16 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
         />
         <button
           onClick={handleAddTask}

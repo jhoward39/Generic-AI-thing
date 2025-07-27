@@ -16,6 +16,7 @@ model Todo {
   earliestStartDate DateTime?
   isOnCriticalPath  Boolean  @default(false)
   imageUrl          String?
+  done              Boolean  @default(false) // Whether task is completed
   
   // Dependencies relationship
   dependencies     TaskDependency[] @relation("TaskDependencies")

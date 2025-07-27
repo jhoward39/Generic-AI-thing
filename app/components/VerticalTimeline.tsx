@@ -2,11 +2,30 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '../layout';
+import TaskModal from './TaskModal';
 
 interface Task {
   id: number;
   title: string;
   dueDate: string; // YYYY-MM-DD
+  createdAt: string;
+  duration: number;
+  earliestStartDate?: string;
+  isOnCriticalPath: boolean;
+  imageUrl?: string | null;
+  done?: boolean;
+  dependencies: {
+    dependsOn: {
+      id: number;
+      title: string;
+    };
+  }[];
+  dependentTasks: {
+    task: {
+      id: number;
+      title: string;
+    };
+  }[];
 }
 
 interface Dependency {
@@ -18,7 +37,9 @@ interface VerticalTimelineProps {
   tasks: Task[];
   dependencies: Dependency[];
   onTaskMove: (taskId: number, newDate: string) => void;
-  onCreateDependency: (fromId: number, toId: number) => void;
+  onCreateDependency: (fromId: number, toId: number) => Promise<{ success: boolean; error?: string }>;
+  onTaskUpdate: () => void;
+  onTaskDelete: (id: number) => void;
 }
 
 /* ------------------------------------------------------------------
@@ -61,6 +82,8 @@ export default function VerticalTimeline({
   dependencies,
   onTaskMove,
   onCreateDependency,
+  onTaskUpdate,
+  onTaskDelete,
 }: VerticalTimelineProps) {
   const { isDark } = useTheme();
   const [zoom, setZoom] = useState(1.0);
@@ -71,8 +94,13 @@ export default function VerticalTimeline({
   const [scrollTop, setScrollTop] = useState(0);
   const [forceUpdate, setForceUpdate] = useState(0);
   const [containerWidth, setContainerWidth] = useState(800);
+  const [dependencyError, setDependencyError] = useState<string | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isCommandHeld, setIsCommandHeld] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const minimapRef = useRef<HTMLDivElement>(null);
   const taskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const hasScrolledToToday = useRef(false);
 
@@ -304,10 +332,39 @@ export default function VerticalTimeline({
   const handleWheel = useCallback((e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
+      
+      const container = containerRef.current;
+      if (!container) return;
+      
+      // Get cursor position relative to the container
+      const rect = container.getBoundingClientRect();
+      const cursorY = e.clientY - rect.top;
+      
+      // Calculate what row the cursor is over (independent of zoom)
+      const scrollTop = container.scrollTop;
+      const oldRowHeight = BASE_ROW_HEIGHT * zoom;
+      const cursorRowIndex = (scrollTop + cursorY) / oldRowHeight;
+      
       const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-      setZoom(prev => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta)));
+      const oldZoom = zoom;
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, oldZoom + delta));
+      
+      // Only update if zoom actually changes
+      if (newZoom !== oldZoom) {
+        setZoom(newZoom);
+        
+        // Calculate new scroll position to keep the same row under cursor
+        // We need to do this after the zoom state updates, so we'll use setTimeout
+        setTimeout(() => {
+          if (containerRef.current) {
+            const newRowHeight = BASE_ROW_HEIGHT * newZoom;
+            const newScrollTop = (cursorRowIndex * newRowHeight) - cursorY;
+            containerRef.current.scrollTop = Math.max(0, newScrollTop);
+          }
+        }, 0);
+      }
     }
-  }, []);
+  }, [zoom]);
 
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
@@ -332,51 +389,89 @@ export default function VerticalTimeline({
     };
   }, [handleWheel, handleScroll]);
 
+  // Track Command/Ctrl key state for cursor styling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        setIsCommandHeld(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) {
+        setIsCommandHeld(false);
+      }
+    };
+
+    const handleWindowBlur = () => {
+      setIsCommandHeld(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, []);
+
   /* ----------------------- Drag Handlers ----------------------- */
   const handleTaskMouseDown = useCallback((e: React.MouseEvent, task: Task) => {
-    if (e.button === 0) { // Left click for drag
+    if (e.button === 0) { // Left click
       e.preventDefault();
       e.stopPropagation();
       
-      setDraggedTask(task.id);
-      
-      // Set initial drag position to current mouse position
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        setDraggedTaskPos({ x: mouseX, y: mouseY });
+      // Check for Command/Ctrl + click to open modal
+      if (e.metaKey || e.ctrlKey) {
+        setSelectedTask(task);
+        setShowTaskModal(true);
+        return; // Don't start drag when opening modal
       }
+      
+      // Otherwise start drag
+      setDraggedTask(task.id);
+      setDraggedTaskPos({ x: e.clientX, y: e.clientY });
     } else if (e.button === 2) { // Right click for dependency
       e.preventDefault();
       console.log('Right click on task:', task.id, 'connectingFrom:', connectingFrom);
       if (connectingFrom === null) {
         setConnectingFrom(task.id);
+        setDependencyError(null); // Clear any previous error
         console.log('Started connecting from task:', task.id);
       } else if (connectingFrom !== task.id) {
         console.log('Creating dependency from', connectingFrom, 'to', task.id);
-        onCreateDependency(connectingFrom, task.id);
-        setConnectingFrom(null);
+        onCreateDependency(connectingFrom, task.id).then(result => {
+          if (result.success) {
+            setConnectingFrom(null);
+            setDependencyError(null);
+          } else {
+            setDependencyError(result.error || 'Failed to create dependency.');
+          }
+        });
       }
     }
   }, [connectingFrom, onCreateDependency]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (draggedTask !== null && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      setDraggedTaskPos({ x: mouseX, y: mouseY });
+    if (draggedTask !== null) {
+      // Use viewport coordinates for consistent tracking
+      setDraggedTaskPos({ x: e.clientX, y: e.clientY });
     }
   }, [draggedTask]);
 
   const handleMouseUp = useCallback(() => {
-    if (draggedTask !== null && containerRef.current) {
-      // Calculate which row the task was dropped in based on mouse position
+    if (draggedTask !== null && containerRef.current && draggedTaskPos) {
+      // Convert viewport coordinates back to container coordinates for drop calculation
+      const rect = containerRef.current.getBoundingClientRect();
+      const containerY = draggedTaskPos.y - rect.top;
       const scrollTop = containerRef.current.scrollTop;
-      const dropY = (draggedTaskPos?.y || 0) + scrollTop;
-      const dropRowIndex = Math.floor(dropY / rowHeight);
+      
+      // Use the center of the dragged task for more accurate drop detection
+      const taskCenterY = containerY + scrollTop;
+      const dropRowIndex = Math.floor(taskCenterY / rowHeight);
       const clampedRowIndex = Math.max(0, Math.min(dateRows.length - 1, dropRowIndex));
       
       const targetDate = dateRows[clampedRowIndex]?.dateStr;
@@ -401,6 +496,7 @@ export default function VerticalTimeline({
       const isTaskElement = target.closest('[data-task-id]');
       if (!isTaskElement) {
         setConnectingFrom(null);
+        setDependencyError(null); // Clear error when canceling
       }
     }
   }, [connectingFrom]);
@@ -412,33 +508,52 @@ export default function VerticalTimeline({
 
   /* ----------------------- Minimap Calculation ----------------------- */
   const minimapViewport = useMemo(() => {
-    if (!containerRef.current || totalHeight === 0) return { top: 0, height: 0 };
+    if (!containerRef.current || !minimapRef.current || totalHeight === 0) return { top: 0, height: 0 };
     
     const container = containerRef.current;
+    const minimap = minimapRef.current;
     const viewportHeight = container.clientHeight;
+    const minimapHeight = minimap.clientHeight;
     
-    const minimapHeight = container.clientHeight - 20; // Some padding
+    // Simple calculation: what portion of timeline is visible
     const viewportRatio = viewportHeight / totalHeight;
-    const scrollRatio = scrollTop / totalHeight;
+    
+    // How much can we actually scroll
+    const maxScroll = Math.max(0, totalHeight - viewportHeight);
+    
+    // Available minimap space (10px padding top and bottom)
+    const availableSpace = minimapHeight - 20;
+    
+    // Indicator height proportional to what we can see
+    const indicatorHeight = Math.max(4, viewportRatio * availableSpace);
+    
+    // Available travel distance for the indicator
+    const indicatorTravelSpace = availableSpace - indicatorHeight;
+    
+    // Position based on scroll ratio, but only within available travel space
+    const scrollRatio = maxScroll > 0 ? scrollTop / maxScroll : 0;
+    const indicatorTop = 10 + (scrollRatio * indicatorTravelSpace);
     
     return {
-      top: 10 + scrollRatio * minimapHeight,
-      height: Math.max(4, viewportRatio * minimapHeight),
+      top: indicatorTop,
+      height: indicatorHeight,
     };
-  }, [totalHeight, scrollTop, zoom]);
+  }, [totalHeight, scrollTop]);
 
   /* ----------------------- Task Dots for Minimap ----------------------- */
   const taskDots = useMemo(() => {
-    if (!containerRef.current || totalHeight === 0) return [];
+    if (!containerRef.current || !minimapRef.current || totalHeight === 0) return [];
     
-    const container = containerRef.current;
-    const minimapHeight = container.clientHeight - 20;
+    // Use actual minimap height for dot positioning
+    const minimap = minimapRef.current;
+    const minimapHeight = minimap.clientHeight;
+    const availableHeight = minimapHeight - 20; // Same padding as viewport
     const dots: Array<{ top: number; count: number }> = [];
     
     dateRows.forEach((row, index) => {
       if (row.tasks.length > 0) {
         const rowPosition = (index * rowHeight) / totalHeight;
-        const dotTop = 10 + rowPosition * minimapHeight;
+        const dotTop = 10 + rowPosition * availableHeight;
         dots.push({ top: dotTop, count: row.tasks.length });
       }
     });
@@ -451,12 +566,15 @@ export default function VerticalTimeline({
     e.preventDefault();
     setMinimapDragging(true);
     
-    if (containerRef.current) {
+    if (containerRef.current && minimapRef.current) {
       const rect = e.currentTarget.getBoundingClientRect();
       const y = e.clientY - rect.top;
-      const minimapHeight = containerRef.current.clientHeight - 20;
-      const scrollRatio = Math.max(0, Math.min(1, (y - 10) / minimapHeight));
-      const newScrollTop = scrollRatio * (totalHeight - containerRef.current.clientHeight);
+      const viewportHeight = containerRef.current.clientHeight;
+      const minimapHeight = minimapRef.current.clientHeight;
+      const availableHeight = minimapHeight - 20;
+      const scrollRatio = Math.max(0, Math.min(1, (y - 10) / availableHeight));
+      const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
+      const newScrollTop = scrollRatio * maxScrollTop;
       
       containerRef.current.scrollTop = Math.max(0, newScrollTop);
       setScrollTop(containerRef.current.scrollTop);
@@ -464,13 +582,16 @@ export default function VerticalTimeline({
   }, [totalHeight]);
 
   const handleMinimapMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!minimapDragging || !containerRef.current) return;
+    if (!minimapDragging || !containerRef.current || !minimapRef.current) return;
     
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    const minimapHeight = containerRef.current.clientHeight - 20;
-    const scrollRatio = Math.max(0, Math.min(1, (y - 10) / minimapHeight));
-    const newScrollTop = scrollRatio * (totalHeight - containerRef.current.clientHeight);
+    const viewportHeight = containerRef.current.clientHeight;
+    const minimapHeight = minimapRef.current.clientHeight;
+    const availableHeight = minimapHeight - 20;
+    const scrollRatio = Math.max(0, Math.min(1, (y - 10) / availableHeight));
+    const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
+    const newScrollTop = scrollRatio * maxScrollTop;
     
     containerRef.current.scrollTop = Math.max(0, newScrollTop);
     setScrollTop(containerRef.current.scrollTop);
@@ -516,22 +637,36 @@ export default function VerticalTimeline({
     }
   }, [tasks, dependencies]);
 
+  // Auto-clear error messages after 5 seconds
+  useEffect(() => {
+    if (dependencyError) {
+      const timer = setTimeout(() => {
+        setDependencyError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [dependencyError]);
+
   // Calculate which row would be the drop target
   const dropTargetRowIndex = useMemo(() => {
     if (draggedTask === null || !draggedTaskPos || !containerRef.current) return -1;
     
+    // Convert viewport coordinates to container coordinates (same as drop logic)
+    const rect = containerRef.current.getBoundingClientRect();
+    const containerY = draggedTaskPos.y - rect.top;
     const scrollTop = containerRef.current.scrollTop;
-    const dropY = draggedTaskPos.y + scrollTop;
-    const rowIndex = Math.floor(dropY / rowHeight);
+    const taskCenterY = containerY + scrollTop;
+    const rowIndex = Math.floor(taskCenterY / rowHeight);
     return Math.max(0, Math.min(dateRows.length - 1, rowIndex));
   }, [draggedTask, draggedTaskPos, rowHeight, dateRows]);
 
   /* ----------------------- Render ----------------------- */
   return (
-    <div className="flex h-screen bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex h-[calc(100vh-80px)] bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
       {/* Minimap */}
       <div 
-        className="relative bg-[#FFFFF8] dark:bg-gray-900 cursor-pointer transition-colors duration-200"
+        ref={minimapRef}
+        className="relative bg-[#FFFFF8] dark:bg-gray-900 cursor-pointer transition-colors duration-200 h-full"
         style={{ width: MINIMAP_WIDTH }}
         onMouseDown={handleMinimapMouseDown}
         onMouseMove={handleMinimapMouseMove}
@@ -550,9 +685,9 @@ export default function VerticalTimeline({
             key={index}
             className="absolute left-1/2 transform -translate-x-1/2 bg-blue-600 rounded-full"
             style={{
-              width: Math.min(8, 4 + dot.count),
-              height: Math.min(8, 4 + dot.count),
-              top: dot.top - Math.min(4, 2 + dot.count / 2),
+              width: Math.min(12, 6 + Math.floor(dot.count * 1.5)),
+              height: Math.min(12, 6 + Math.floor(dot.count * 1.5)),
+              top: dot.top - Math.min(6, 3 + Math.floor(dot.count * 0.75)),
             }}
             title={`${dot.count} task${dot.count > 1 ? 's' : ''}`}
           />
@@ -561,11 +696,9 @@ export default function VerticalTimeline({
         {/* Current viewport indicator */}
         <div className="absolute left-0 right-0 bg-gray-300 border border-gray-400 rounded-sm opacity-80" style={{
           top: minimapViewport.top,
-          height: Math.max(4, minimapViewport.height),
+          height: minimapViewport.height,
         }}>
-          <div
-            className="w-full h-full bg-gray-200"
-          ></div>
+          <div className="w-full h-full bg-gray-200"></div>
         </div>
       </div>
 
@@ -596,8 +729,9 @@ export default function VerticalTimeline({
             viewBox={`0 0 ${containerWidth} ${totalHeight}`}
             preserveAspectRatio="none"
           >
-            {/* Arrow marker definition */}
+            {/* Arrow marker definitions */}
             <defs>
+              {/* Normal dependency arrow */}
               <marker 
                 id="arrow-marker" 
                 viewBox="0 0 10 10" 
@@ -609,20 +743,38 @@ export default function VerticalTimeline({
               >
                 <path d="M0,0 L0,6 L9,3 z" fill={isDark ? '#9CA3AF' : '#6B7280'}/>
               </marker>
+              
+              {/* Critical path arrow */}
+              <marker 
+                id="critical-arrow-marker" 
+                viewBox="0 0 10 10" 
+                refX="3" 
+                refY="3" 
+                markerWidth="6" 
+                markerHeight="6" 
+                orient="auto"
+              >
+                <path d="M0,0 L0,6 L9,3 z" fill="#D97706"/>
+              </marker>
             </defs>
 
             {/* Dependency arrows */}
-            {dependencyPaths.map((dep, index) => (
-              <g key={dep!.id}>
-                <path
-                  d={dep!.path}
-                  stroke={isDark ? '#9CA3AF' : '#6B7280'}
-                  strokeWidth="2"
-                  fill="none"
-                  markerEnd="url(#arrow-marker)"
-                />
-              </g>
-            ))}
+            {dependencyPaths.map((dep, index) => {
+              // Check if both tasks are on critical path
+              const isCriticalPath = dep!.fromTask.isOnCriticalPath && dep!.toTask.isOnCriticalPath;
+              
+              return (
+                <g key={dep!.id}>
+                  <path
+                    d={dep!.path}
+                    stroke={isCriticalPath ? '#D97706' : (isDark ? '#9CA3AF' : '#6B7280')}
+                    strokeWidth={isCriticalPath ? "3" : "2"}
+                    fill="none"
+                    markerEnd={isCriticalPath ? "url(#critical-arrow-marker)" : "url(#arrow-marker)"}
+                  />
+                </g>
+              );
+            })}
           </svg>
         </div>
 
@@ -665,8 +817,9 @@ export default function VerticalTimeline({
                   }}
                   key={task.id}
                   data-task-id={task.id}
-                  className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 cursor-move select-none text-xs transition-colors duration-200 flex items-center justify-center ${
-                    draggedTask === task.id ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500" : ""
+                  className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 select-none text-xs transition-colors duration-200 flex items-center justify-center ${
+                    isCommandHeld ? "cursor-pointer" : "cursor-move"
+                  } ${draggedTask === task.id ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500" : ""
                   } ${connectingFrom === task.id ? "ring-2 ring-orange-400" : ""}`}
                   style={{
                     left: draggedTask === task.id && draggedTaskPos ? 
@@ -681,10 +834,15 @@ export default function VerticalTimeline({
                     pointerEvents: draggedTask === task.id ? 'none' : 'auto',
                     transform: 'none',
                     transition: draggedTask === task.id ? 'none' : 'all 0.2s ease',
+                    position: draggedTask === task.id ? 'fixed' : 'absolute',
                   }}
                   onMouseDown={(e) => handleTaskMouseDown(e, task)}
                 >
-                  <div className="font-medium text-gray-900 dark:text-gray-100 text-center leading-tight truncate">{task.title}</div>
+                  <div className={`font-medium text-center leading-tight truncate ${
+                    task.done 
+                      ? 'line-through text-gray-500 dark:text-gray-500'
+                      : 'text-gray-900 dark:text-gray-100'
+                  }`}>{task.title}</div>
                 </div>
               ))}
             </div>
@@ -692,11 +850,29 @@ export default function VerticalTimeline({
         </div>
       </div>
 
-      {/* Instructions */}
-      {connectingFrom && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-orange-100 border border-orange-300 rounded px-4 py-2 text-sm">
+      {/* Instructions and Error Messages */}
+      {dependencyError ? (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-600 rounded px-4 py-2 text-sm text-red-800 dark:text-red-200">
+          {dependencyError}
+        </div>
+      ) : connectingFrom ? (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-600 rounded px-4 py-2 text-sm text-orange-800 dark:text-orange-200">
           Right-click another task to create dependency
         </div>
+      ) : null}
+
+      {/* Task Modal */}
+      {showTaskModal && selectedTask && (
+        <TaskModal
+          task={selectedTask}
+          isOpen={showTaskModal}
+          onClose={() => {
+            setShowTaskModal(false);
+            setSelectedTask(null);
+          }}
+          onTaskUpdate={onTaskUpdate}
+          onTaskDelete={onTaskDelete}
+        />
       )}
     </div>
   );
