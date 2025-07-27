@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useTheme } from '../layout';
 
 interface Task {
   id: number;
@@ -61,6 +62,7 @@ export default function VerticalTimeline({
   onTaskMove,
   onCreateDependency,
 }: VerticalTimelineProps) {
+  const { isDark } = useTheme();
   const [zoom, setZoom] = useState(1.0);
   const [draggedTask, setDraggedTask] = useState<number | null>(null);
   const [draggedTaskPos, setDraggedTaskPos] = useState<{ x: number; y: number } | null>(null);
@@ -415,10 +417,10 @@ export default function VerticalTimeline({
 
   /* ----------------------- Render ----------------------- */
   return (
-    <div className="flex h-screen bg-[#FFFFF8]">
+    <div className="flex h-screen bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
       {/* Minimap */}
       <div 
-        className="relative bg-[#FFFFF8] cursor-pointer" 
+        className="relative bg-[#FFFFF8] dark:bg-gray-900 cursor-pointer transition-colors duration-200"
         style={{ width: MINIMAP_WIDTH }}
         onMouseDown={handleMinimapMouseDown}
         onMouseMove={handleMinimapMouseMove}
@@ -492,7 +494,7 @@ export default function VerticalTimeline({
                 markerHeight="6" 
                 orient="auto"
               >
-                <path d="M0,0 L0,6 L9,3 z" fill="#6b7280"/>
+                <path d="M0,0 L0,6 L9,3 z" fill={isDark ? '#9CA3AF' : '#6B7280'}/>
               </marker>
             </defs>
 
@@ -501,7 +503,7 @@ export default function VerticalTimeline({
               <g key={dep!.id}>
                 <path
                   d={dep!.path}
-                  stroke="#6b7280"
+                  stroke={isDark ? '#9CA3AF' : '#6B7280'}
                   strokeWidth="2"
                   fill="none"
                   markerEnd="url(#arrow-marker)"
@@ -520,9 +522,9 @@ export default function VerticalTimeline({
           {dateRows.map((row, index) => (
             <div
               key={row.dateStr}
-              className={`border-b border-gray-200 relative flex items-center ${
+              className={`border-b border-gray-200 dark:border-gray-700 relative flex items-center transition-colors duration-200 ${
                 draggedTask !== null && dropTargetRowIndex === index
-                  ? "bg-blue-50 border-blue-300" 
+                  ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600" 
                   : ""
               }`}
               style={{ 
@@ -533,7 +535,7 @@ export default function VerticalTimeline({
               }}
             >
               {/* Date label */}
-              <div className="absolute left-4 top-2 text-sm text-gray-600 font-medium">
+              <div className="absolute left-4 top-2 text-sm text-gray-600 dark:text-gray-400 font-medium transition-colors duration-200">
                 {row.date.toLocaleDateString("en-US", { 
                   weekday: "short", 
                   month: "short", 
@@ -549,8 +551,8 @@ export default function VerticalTimeline({
                     else taskRefs.current.delete(task.id);
                   }}
                   key={task.id}
-                  className={`absolute bg-blue-100 border border-blue-300 rounded px-2 py-1 cursor-move select-none text-xs ${
-                    draggedTask === task.id ? "opacity-80 shadow-lg bg-blue-200 border-blue-400" : ""
+                  className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 cursor-move select-none text-xs transition-colors duration-200 ${
+                    draggedTask === task.id ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500" : ""
                   } ${connectingFrom === task.id ? "ring-2 ring-orange-400" : ""}`}
                   style={{
                     left: draggedTask === task.id && draggedTaskPos ? 
@@ -568,7 +570,7 @@ export default function VerticalTimeline({
                   }}
                   onMouseDown={(e) => handleTaskMouseDown(e, task)}
                 >
-                  <div className="truncate font-medium">{task.title}</div>
+                  <div className="truncate font-medium text-gray-900 dark:text-gray-100">{task.title}</div>
                 </div>
               ))}
             </div>

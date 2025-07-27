@@ -141,22 +141,22 @@ export default function Home() {
   }, [todos]);
 
   return (
-    <div className="min-h-screen bg-[#FFFFF8] relative">
+    <div className="min-h-screen bg-[#FFFFF8] dark:bg-gray-900 relative transition-colors duration-200">
       {/* Project overview */}
       {dependencyInfo && (
-        <div className="absolute top-4 right-4 bg-[#FFFFF8] p-4 z-20">
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div className="text-center border border-black rounded p-2">
-              <div className="text-gray-600">Total</div>
-              <div className="font-semibold">{dependencyInfo.totalTasks}</div>
+        <div className="absolute top-4 right-4 bg-[#FFFFF8] dark:bg-gray-900 p-4 z-20 transition-colors duration-200">
+          <div className="flex gap-4">
+            <div className="border border-black dark:border-gray-600 rounded p-2 bg-[#FFFFF8] dark:bg-gray-800 transition-colors duration-200">
+              <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{dependencyInfo?.totalTasks || 0}</div>
             </div>
-            <div className="text-center border border-black rounded p-2">
-              <div className="text-gray-600">Critical</div>
-              <div className="font-semibold">{dependencyInfo.criticalPath.criticalPath.length}</div>
+            <div className="border border-black dark:border-gray-600 rounded p-2 bg-[#FFFFF8] dark:bg-gray-800 transition-colors duration-200">
+              <div className="text-sm text-gray-600 dark:text-gray-400">Critical</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{dependencyInfo?.criticalPath?.criticalPath?.length || 0}</div>
             </div>
-            <div className="text-center border border-black rounded p-2">
-              <div className="text-gray-600">Duration</div>
-              <div className="font-semibold">{dependencyInfo.criticalPath.totalDuration}d</div>
+            <div className="border border-black dark:border-gray-600 rounded p-2 bg-[#FFFFF8] dark:bg-gray-800 transition-colors duration-200">
+              <div className="text-sm text-gray-600 dark:text-gray-400">Duration</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{dependencyInfo?.criticalPath?.totalDuration || 0}d</div>
             </div>
           </div>
         </div>
@@ -171,28 +171,32 @@ export default function Home() {
       />
 
       {/* Add task bar */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] px-4 py-3 flex gap-2 items-center z-20">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] dark:bg-gray-900 px-4 py-3 flex gap-2 items-center z-20 transition-colors duration-200">
         <input
           type="text"
           placeholder="add a task..."
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          className="p-2 border border-gray-300 rounded-md bg-transparent"
+          className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200"
         />
         <input
           type="date"
           value={newDueDate}
           onChange={(e) => setNewDueDate(e.target.value)}
-          className="p-2 border border-gray-300 rounded-md bg-transparent"
+          className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
         />
         <input
           type="number"
-          min="1"
           value={newDuration}
           onChange={(e) => setNewDuration(e.target.value)}
-          className="w-24 p-2 border border-gray-300 rounded-md bg-transparent"
+          min="1"
+          className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 w-16 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
         />
-        <button onClick={handleAddTask} className="btn-primary px-4 py-2">
+        <button
+          onClick={handleAddTask}
+          className="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 px-3 py-1 rounded text-gray-900 dark:text-gray-100 transition-colors duration-200"
+          disabled={!newTitle.trim()}
+        >
           Add
         </button>
       </div>
