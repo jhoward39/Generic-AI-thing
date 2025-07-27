@@ -393,6 +393,23 @@ export default function VerticalTimeline({
     setDraggedTaskPos(null);
   }, [draggedTask, draggedTaskPos, rowHeight, dateRows, onTaskMove]);
 
+  // Handle clicking outside tasks to cancel dependency creation
+  const handleTimelineClick = useCallback((e: React.MouseEvent) => {
+    // Only cancel dependency creation if we're in connecting mode and didn't click on a task
+    if (connectingFrom !== null) {
+      const target = e.target as HTMLElement;
+      const isTaskElement = target.closest('[data-task-id]');
+      if (!isTaskElement) {
+        setConnectingFrom(null);
+      }
+    }
+  }, [connectingFrom]);
+
+  // Prevent context menu on timeline
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
   /* ----------------------- Minimap Calculation ----------------------- */
   const minimapViewport = useMemo(() => {
     if (!containerRef.current || totalHeight === 0) return { top: 0, height: 0 };
@@ -560,6 +577,8 @@ export default function VerticalTimeline({
         onScroll={handleScroll}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onClick={handleTimelineClick}
+        onContextMenu={handleContextMenu}
       >
         {/* React Flow for dependency arrows */}
         <div 
@@ -645,6 +664,7 @@ export default function VerticalTimeline({
                     else taskRefs.current.delete(task.id);
                   }}
                   key={task.id}
+                  data-task-id={task.id}
                   className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 cursor-move select-none text-xs transition-colors duration-200 flex items-center justify-center ${
                     draggedTask === task.id ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500" : ""
                   } ${connectingFrom === task.id ? "ring-2 ring-orange-400" : ""}`}
