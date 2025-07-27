@@ -70,6 +70,7 @@ export default function VerticalTimeline({
   const [minimapDragging, setMinimapDragging] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(800);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const taskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -129,8 +130,7 @@ export default function VerticalTimeline({
     const rowIndex = dateRows.indexOf(row);
     const taskIndex = row.tasks.findIndex(t => t.id === task.id);
     
-    // Calculate available width (same as used in HTML positioning)
-    const containerWidth = containerRef.current?.clientWidth || 800;
+    // Use tracked container width for consistent calculations
     const availableWidth = containerWidth - MINIMAP_WIDTH - 32;
     
     // Calculate task X position within the row
@@ -142,12 +142,90 @@ export default function VerticalTimeline({
       taskX = spacing * (taskIndex + 1);
     }
     
-    // Calculate absolute coordinates
+    // Calculate absolute coordinates - ensuring perfect alignment
     const absoluteX = MINIMAP_WIDTH + taskX;
+    // Use the exact same Y calculation as the HTML positioning: row center
     const absoluteY = rowIndex * rowHeight + (rowHeight / 2);
     
     return { x: absoluteX, y: absoluteY };
-  }, [dateRows, rowHeight, taskNodeWidth, MINIMAP_WIDTH]);
+  }, [dateRows, rowHeight, containerWidth, MINIMAP_WIDTH]);
+
+  // Calculate clean edge connection points with proper top/bottom logic and perpendicular direction vectors
+  const getBoxEdgePointWithDirection = useCallback((centerX: number, centerY: number, targetX: number, targetY: number, isSource: boolean) => {
+    const halfWidth = (TASK_NODE_WIDTH * zoom) / 2;
+    const halfHeight = (TASK_NODE_HEIGHT * zoom) / 2;
+    const arrowLength = 9; // Length of arrow head for proper offset
+    
+    // Calculate direction to target
+    const dx = targetX - centerX;
+    const dy = targetY - centerY;
+    
+    // Determine which edge to connect to based on direction and role (source vs target)
+    // Prioritize vertical connections when there's any significant vertical separation
+    if (Math.abs(dy) > 10) { // If vertically separated by more than 10 pixels, use vertical connection
+      // Tasks are vertically separated - use top/bottom edges
+      if (isSource) {
+        // For source task: if target is below, connect from bottom edge
+        if (dy > 0) {
+          return { 
+            point: { x: centerX, y: centerY + halfHeight }, 
+            direction: { x: 0, y: 1 } // Outward from bottom edge (down)
+          };
+        } else {
+          return { 
+            point: { x: centerX, y: centerY - halfHeight }, 
+            direction: { x: 0, y: -1 } // Outward from top edge (up)
+          };
+        }
+      } else {
+        // For target task: offset by arrow length so line stops before box
+        if (dy < 0) {
+          // Source is above target - connect to top edge, offset outward by arrow length
+          return { 
+            point: { x: centerX, y: centerY - halfHeight - arrowLength }, 
+            direction: { x: 0, y: -1 } // Inward to top edge (up)
+          };
+        } else {
+          // Source is below target - connect to bottom edge, offset outward by arrow length
+          return { 
+            point: { x: centerX, y: centerY + halfHeight + arrowLength }, 
+            direction: { x: 0, y: 1 } // Inward to bottom edge (down)
+          };
+        }
+      }
+    } else {
+      // Tasks are horizontally separated - use left/right edges
+      if (isSource) {
+        // For source task: connect from the edge facing the target
+        if (dx > 0) {
+          return { 
+            point: { x: centerX + halfWidth, y: centerY }, 
+            direction: { x: 1, y: 0 } // Outward from right edge (right)
+          };
+        } else {
+          return { 
+            point: { x: centerX - halfWidth, y: centerY }, 
+            direction: { x: -1, y: 0 } // Outward from left edge (left)
+          };
+        }
+      } else {
+        // For target task: offset by arrow length so line stops before box
+        if (dx < 0) {
+          // Source is to the left of target - connect to left edge, offset outward by arrow length
+          return { 
+            point: { x: centerX - halfWidth - arrowLength, y: centerY }, 
+            direction: { x: -1, y: 0 } // Inward to left edge (left)
+          };
+        } else {
+          // Source is to the right of target - connect to right edge, offset outward by arrow length
+          return { 
+            point: { x: centerX + halfWidth + arrowLength, y: centerY }, 
+            direction: { x: 1, y: 0 } // Inward to right edge (right)
+          };
+        }
+      }
+    }
+  }, [zoom]);
 
   // Calculate dependency paths for SVG rendering
   const dependencyPaths = useMemo(() => {
@@ -157,40 +235,38 @@ export default function VerticalTimeline({
       
       if (!fromTask || !toTask) return null;
 
-      // Get actual DOM positions
-      const fromPos = getTaskCoordinates(fromTask);
-      const toPos = getTaskCoordinates(toTask);
+      // Get center positions
+      const fromCenter = getTaskCoordinates(fromTask);
+      const toCenter = getTaskCoordinates(toTask);
       
-      if (!fromPos || !toPos) return null;
+      if (!fromCenter || !toCenter) return null;
 
-      // Calculate natural curve based on task relationship
-      const deltaY = toPos.y - fromPos.y;
-      const deltaX = toPos.x - fromPos.x;
-      // Simple, natural curve that always flows forward
-      // Control points create a gentle arc in the direction of flow
-      const midX = fromPos.x + deltaX * 0.5;
-      const midY = fromPos.y + deltaY * 0.5;
+      // Calculate edge intersection points with direction info
+      const fromEdgeInfo = getBoxEdgePointWithDirection(fromCenter.x, fromCenter.y, toCenter.x, toCenter.y, true);
+      const toEdgeInfo = getBoxEdgePointWithDirection(toCenter.x, toCenter.y, fromCenter.x, fromCenter.y, false);
+
+      // Control points for perpendicular approach
+      const controlDistance = Math.max(50 * zoom, Math.abs(toEdgeInfo.point.x - fromEdgeInfo.point.x) * 0.3, Math.abs(toEdgeInfo.point.y - fromEdgeInfo.point.y) * 0.3);
       
-      // Offset control points to create gentle curve
-      const curve1X = fromPos.x + deltaX * 0.25;
-      const curve1Y = fromPos.y + deltaY * 0.1;
-      const curve2X = fromPos.x + deltaX * 0.75;
-      const curve2Y = fromPos.y + deltaY * 0.9;
+      const curve1X = fromEdgeInfo.point.x + fromEdgeInfo.direction.x * controlDistance;
+      const curve1Y = fromEdgeInfo.point.y + fromEdgeInfo.direction.y * controlDistance;
+      const curve2X = toEdgeInfo.point.x + toEdgeInfo.direction.x * controlDistance;
+      const curve2Y = toEdgeInfo.point.y + toEdgeInfo.direction.y * controlDistance;
       
-      const path = `M ${fromPos.x} ${fromPos.y} C ${curve1X} ${curve1Y} ${curve2X} ${curve2Y} ${toPos.x} ${toPos.y}`;
+      const path = `M ${fromEdgeInfo.point.x} ${fromEdgeInfo.point.y} C ${curve1X} ${curve1Y} ${curve2X} ${curve2Y} ${toEdgeInfo.point.x} ${toEdgeInfo.point.y}`;
       
-      return {
-        id: `dep-${index}`,
-        path,
-        fromTask,
-        toTask,
-        fromX: fromPos.x,
-        fromY: fromPos.y,
-        toX: toPos.x,
-        toY: toPos.y
-      };
+              return {
+          id: `dep-${index}`,
+          path,
+          fromTask,
+          toTask,
+          fromX: fromEdgeInfo.point.x,
+          fromY: fromEdgeInfo.point.y,
+          toX: toEdgeInfo.point.x,
+          toY: toEdgeInfo.point.y
+        };
     }).filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [dependencies, tasks, getTaskCoordinates, forceUpdate]);
+  }, [dependencies, tasks, getTaskCoordinates, getBoxEdgePointWithDirection, forceUpdate, zoom]);
 
   // Force dependency path updates when tasks or dependencies change
   useEffect(() => {
@@ -396,14 +472,32 @@ export default function VerticalTimeline({
     }
   }, [minimapDragging]);
 
-  // Handle window resize to update minimap
+  // Handle window resize to update minimap and container width
   useEffect(() => {
     const handleResize = () => {
       setScrollTop(containerRef.current?.scrollTop || 0);
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Track initial container width
+  useEffect(() => {
+    if (containerRef.current) {
+      setContainerWidth(containerRef.current.clientWidth);
+    }
+  }, []);
+
+  // Update container width when dependencies or tasks change
+  useEffect(() => {
+    if (containerRef.current) {
+      setContainerWidth(containerRef.current.clientWidth);
+      setForceUpdate(prev => prev + 1);
+    }
+  }, [tasks, dependencies]);
 
   // Calculate which row would be the drop target
   const dropTargetRowIndex = useMemo(() => {
@@ -480,7 +574,7 @@ export default function VerticalTimeline({
           <svg
             width="100%"
             height="100%"
-            viewBox={`0 0 ${containerRef.current?.clientWidth || 800} ${totalHeight}`}
+            viewBox={`0 0 ${containerWidth} ${totalHeight}`}
             preserveAspectRatio="none"
           >
             {/* Arrow marker definition */}
@@ -488,7 +582,7 @@ export default function VerticalTimeline({
               <marker 
                 id="arrow-marker" 
                 viewBox="0 0 10 10" 
-                refX="9" 
+                refX="3" 
                 refY="3" 
                 markerWidth="6" 
                 markerHeight="6" 
@@ -551,13 +645,13 @@ export default function VerticalTimeline({
                     else taskRefs.current.delete(task.id);
                   }}
                   key={task.id}
-                  className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 cursor-move select-none text-xs transition-colors duration-200 ${
+                  className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 cursor-move select-none text-xs transition-colors duration-200 flex items-center justify-center ${
                     draggedTask === task.id ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500" : ""
                   } ${connectingFrom === task.id ? "ring-2 ring-orange-400" : ""}`}
                   style={{
                     left: draggedTask === task.id && draggedTaskPos ? 
                       draggedTaskPos.x - (taskNodeWidth * 0.9) / 2 : 
-                      getTaskCoordinates(task)!.x - (taskNodeWidth / 2),
+                      getTaskCoordinates(task)!.x - MINIMAP_WIDTH - (taskNodeWidth / 2),
                     top: draggedTask === task.id && draggedTaskPos ? 
                       draggedTaskPos.y - (taskNodeHeight * 0.9) / 2 : 
                       (rowHeight - taskNodeHeight) / 2,
@@ -570,31 +664,12 @@ export default function VerticalTimeline({
                   }}
                   onMouseDown={(e) => handleTaskMouseDown(e, task)}
                 >
-                  <div className="truncate font-medium text-gray-900 dark:text-gray-100">{task.title}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100 text-center leading-tight truncate">{task.title}</div>
                 </div>
               ))}
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Zoom controls */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-        <button
-          onClick={() => setZoom(prev => Math.min(MAX_ZOOM, prev + ZOOM_STEP))}
-          className="btn-primary px-3 py-1 text-sm"
-        >
-          +
-        </button>
-        <div className="text-xs text-center text-gray-600">
-          {Math.round(zoom * 100)}%
-        </div>
-        <button
-          onClick={() => setZoom(prev => Math.max(MIN_ZOOM, prev - ZOOM_STEP))}
-          className="btn-primary px-3 py-1 text-sm"
-        >
-          −
-        </button>
       </div>
 
       {/* Instructions */}
