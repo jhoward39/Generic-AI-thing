@@ -14,4 +14,4 @@ export async function POST() {
     console.error("Error updating task scheduling:", error);
     return NextResponse.json({ error: "Error updating task scheduling" }, { status: 500 });
   }
-} 
+}

@@ -18,7 +18,17 @@ interface Todo {
 }
 
 interface DependencyInfo {
-  criticalPath: { criticalPath: { id: number; title: string; duration: number; earliestStart: number; latestStart: number; slack: number }[]; totalDuration: number };
+  criticalPath: {
+    criticalPath: {
+      id: number;
+      title: string;
+      duration: number;
+      earliestStart: number;
+      latestStart: number;
+      slack: number;
+    }[];
+    totalDuration: number;
+  };
   totalTasks: number;
 }
 

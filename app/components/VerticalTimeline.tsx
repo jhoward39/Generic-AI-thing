@@ -73,8 +73,6 @@ function addDays(date: Date, days: number): Date {
   return result;
 }
 
-
-
 /* ------------------------------------------------------------------
  * Component
  * ------------------------------------------------------------------*/
@@ -108,7 +106,7 @@ export default function VerticalTimeline({
   // Update selectedTask when tasks change (to reflect image loading)
   useEffect(() => {
     if (selectedTask) {
-      const updatedTask = tasks.find(task => task.id === selectedTask.id);
+      const updatedTask = tasks.find((task) => task.id === selectedTask.id);
       if (updatedTask) {
         setSelectedTask(updatedTask);
       }
@@ -838,7 +836,7 @@ export default function VerticalTimeline({
           {dateRows.map((row, index) => {
             const today = formatDate(new Date());
             const isToday = row.dateStr === today;
-            
+
             return (
               <div
                 key={row.dateStr}
@@ -851,73 +849,75 @@ export default function VerticalTimeline({
                     ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600"
                     : ""
                 }`}
-              style={{
-                height: rowHeight,
-                marginLeft: MINIMAP_WIDTH,
-                marginRight: "32px",
-                width: `calc(100% - ${MINIMAP_WIDTH}px - 32px)`,
-              }}
-            >
-              {/* Date label */}
-              <div className={`absolute left-4 top-2 text-sm font-medium transition-colors duration-200 ${
-                isToday 
-                  ? "text-blue-900 dark:text-blue-900" 
-                  : "text-gray-600 dark:text-gray-400"
-              }`}>
-                {row.date.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </div>
-
-              {/* Tasks in this row */}
-              {row.tasks.map((task) => (
+                style={{
+                  height: rowHeight,
+                  marginLeft: MINIMAP_WIDTH,
+                  marginRight: "32px",
+                  width: `calc(100% - ${MINIMAP_WIDTH}px - 32px)`,
+                }}
+              >
+                {/* Date label */}
                 <div
-                  ref={(el) => {
-                    if (el) taskRefs.current.set(task.id, el);
-                    else taskRefs.current.delete(task.id);
-                  }}
-                  key={task.id}
-                  data-task-id={task.id}
-                  className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 select-none text-xs transition-colors duration-200 flex items-center justify-center ${
-                    isCommandHeld ? "cursor-pointer" : "cursor-move"
-                  } ${
-                    draggedTask === task.id
-                      ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500"
-                      : ""
-                  } ${connectingFrom === task.id ? "ring-2 ring-orange-400" : ""}`}
-                  style={{
-                    left:
-                      draggedTask === task.id && draggedTaskPos
-                        ? draggedTaskPos.x - (taskNodeWidth * 0.9) / 2
-                        : getTaskCoordinates(task)!.x - MINIMAP_WIDTH - taskNodeWidth / 2,
-                    top:
-                      draggedTask === task.id && draggedTaskPos
-                        ? draggedTaskPos.y - (taskNodeHeight * 0.9) / 2
-                        : (rowHeight - taskNodeHeight) / 2,
-                    width: draggedTask === task.id ? taskNodeWidth * 0.9 : taskNodeWidth,
-                    height: draggedTask === task.id ? taskNodeHeight * 0.9 : taskNodeHeight,
-                    zIndex: draggedTask === task.id ? 1000 : 1,
-                    pointerEvents: draggedTask === task.id ? "none" : "auto",
-                    transform: "none",
-                    transition: draggedTask === task.id ? "none" : "all 0.2s ease",
-                    position: draggedTask === task.id ? "fixed" : "absolute",
-                  }}
-                  onMouseDown={(e) => handleTaskMouseDown(e, task)}
+                  className={`absolute left-4 top-2 text-sm font-medium transition-colors duration-200 ${
+                    isToday
+                      ? "text-blue-900 dark:text-blue-900"
+                      : "text-gray-600 dark:text-gray-400"
+                  }`}
                 >
-                  <div
-                    className={`font-medium text-center leading-tight truncate ${
-                      task.done
-                        ? "line-through text-gray-500 dark:text-gray-500"
-                        : "text-gray-900 dark:text-gray-100"
-                    }`}
-                  >
-                    {task.title}
-                  </div>
+                  {row.date.toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </div>
-              ))}
-            </div>
+
+                {/* Tasks in this row */}
+                {row.tasks.map((task) => (
+                  <div
+                    ref={(el) => {
+                      if (el) taskRefs.current.set(task.id, el);
+                      else taskRefs.current.delete(task.id);
+                    }}
+                    key={task.id}
+                    data-task-id={task.id}
+                    className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 select-none text-xs transition-colors duration-200 flex items-center justify-center ${
+                      isCommandHeld ? "cursor-pointer" : "cursor-move"
+                    } ${
+                      draggedTask === task.id
+                        ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500"
+                        : ""
+                    } ${connectingFrom === task.id ? "ring-2 ring-orange-400" : ""}`}
+                    style={{
+                      left:
+                        draggedTask === task.id && draggedTaskPos
+                          ? draggedTaskPos.x - (taskNodeWidth * 0.9) / 2
+                          : getTaskCoordinates(task)!.x - MINIMAP_WIDTH - taskNodeWidth / 2,
+                      top:
+                        draggedTask === task.id && draggedTaskPos
+                          ? draggedTaskPos.y - (taskNodeHeight * 0.9) / 2
+                          : (rowHeight - taskNodeHeight) / 2,
+                      width: draggedTask === task.id ? taskNodeWidth * 0.9 : taskNodeWidth,
+                      height: draggedTask === task.id ? taskNodeHeight * 0.9 : taskNodeHeight,
+                      zIndex: draggedTask === task.id ? 1000 : 1,
+                      pointerEvents: draggedTask === task.id ? "none" : "auto",
+                      transform: "none",
+                      transition: draggedTask === task.id ? "none" : "all 0.2s ease",
+                      position: draggedTask === task.id ? "fixed" : "absolute",
+                    }}
+                    onMouseDown={(e) => handleTaskMouseDown(e, task)}
+                  >
+                    <div
+                      className={`font-medium text-center leading-tight truncate ${
+                        task.done
+                          ? "line-through text-gray-500 dark:text-gray-500"
+                          : "text-gray-900 dark:text-gray-100"
+                      }`}
+                    >
+                      {task.title}
+                    </div>
+                  </div>
+                ))}
+              </div>
             );
           })}
         </div>

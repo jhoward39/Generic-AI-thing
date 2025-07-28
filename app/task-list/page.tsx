@@ -44,7 +44,17 @@ export default function TaskListPage() {
   // Dependency management state
   const [dependencyInfo, setDependencyInfo] = useState<{
     dependencies: unknown[];
-    criticalPath: { criticalPath: { id: number; title: string; duration: number; earliestStart: number; latestStart: number; slack: number }[]; totalDuration: number };
+    criticalPath: {
+      criticalPath: {
+        id: number;
+        title: string;
+        duration: number;
+        earliestStart: number;
+        latestStart: number;
+        slack: number;
+      }[];
+      totalDuration: number;
+    };
     totalTasks: number;
   } | null>(null);
   void dependencyInfo; // Intentionally unused
@@ -106,7 +116,7 @@ export default function TaskListPage() {
   // Update selectedTodoForModal when todos change (to reflect image loading)
   useEffect(() => {
     if (selectedTodoForModal) {
-      const updatedTodo = todos.find(todo => todo.id === selectedTodoForModal.id);
+      const updatedTodo = todos.find((todo) => todo.id === selectedTodoForModal.id);
       if (updatedTodo) {
         setSelectedTodoForModal(updatedTodo);
       }
@@ -242,8 +252,6 @@ export default function TaskListPage() {
       console.error("Failed to delete todo:", error);
     }
   };
-
-
 
   return (
     <div className="min-h-screen bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
@@ -434,13 +442,13 @@ export default function TaskListPage() {
                     : "bg-[#FFFFF8] dark:bg-gray-900"
                 }`}
               >
-                                  {/* Small Icon */}
-                  <div className="col-span-1">
-                    {todo.imageUrl === undefined && (
-                      <div className="w-6 h-6 flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent border-r-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
+                {/* Small Icon */}
+                <div className="col-span-1">
+                  {todo.imageUrl === undefined && (
+                    <div className="w-6 h-6 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent border-r-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
                   {todo.imageUrl === null && (
                     <div className="w-6 h-6 rounded border border-black dark:border-black bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                       <span className="text-xs text-gray-400">?</span>
