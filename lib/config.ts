@@ -29,10 +29,12 @@ export const CONFIG = {
 
   // z-index layers
   Z_INDEX: {
-    MODAL: 50,
-    FLOATING_UI: 30,
-    DRAGGED_TASK: 50,
-    NORMAL_TASK: 20,
+    DROPDOWN: 10000,  // Calendar and other dropdowns (highest)
+    UI_BAR: 9999,     // Fixed UI bars (add task bar, etc.) - ABOVE ALL TASKS
+    MODAL: 50,        // Task modals and error messages
+    DRAGGED_TASK: 50, // Dragged timeline tasks
+    FLOATING_UI: 30,  // Loading indicators
+    NORMAL_TASK: 20,  // Normal timeline elements
   },
 } as const;
 

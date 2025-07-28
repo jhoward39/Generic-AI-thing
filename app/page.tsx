@@ -19,14 +19,18 @@ function HomeContent() {
   useEffect(() => {
     actions.fetchTodos();
     actions.fetchDependencyInfo();
-  }, []); // Remove actions from dependencies to prevent infinite loop
+    // ESLint disabled: Adding actions would cause infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Polling for image loading
   useEffect(() => {
     if (!state.hasPendingImages) return;
     const id = setInterval(actions.fetchTodos, CONFIG.POLLING_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [state.hasPendingImages]); // Remove actions.fetchTodos from dependencies
+    // ESLint disabled: Adding actions.fetchTodos would cause infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.hasPendingImages]);
 
   const handleAddTask = async () => {
     if (!newTitle.trim()) return;
@@ -85,7 +89,7 @@ function HomeContent() {
 
       {/* Add task bar */}
       <div
-        className={`fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] dark:bg-gray-900 px-4 py-3 flex gap-2 items-center z-[${CONFIG.Z_INDEX.NORMAL_TASK}] transition-colors duration-200`}
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] dark:bg-gray-900 px-4 py-3 flex gap-2 items-center z-[99999] transition-colors duration-200"
       >
         <input
           type="text"

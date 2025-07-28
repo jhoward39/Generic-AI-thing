@@ -99,7 +99,7 @@ export default function CustomCalendar({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative z-[99999]" ref={containerRef}>
       {/* Date Input Trigger */}
       <input
         type="text"
@@ -113,7 +113,7 @@ export default function CustomCalendar({
       {/* Calendar Dropdown */}
       {isOpen && (
         <div
-          className={`absolute ${openDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"} left-0 z-20 bg-[#FFFFF8] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4 transition-colors duration-200`}
+          className={`absolute ${openDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"} left-0 z-[99999] bg-[#FFFFF8] dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4 transition-colors duration-200`}
         >
           <style jsx global>{`
             .react-calendar {

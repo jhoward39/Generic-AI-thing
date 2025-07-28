@@ -133,6 +133,7 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
   // Create refs for functions to avoid circular dependencies
   const fetchTodosRef = React.useRef<() => Promise<void>>();
   const fetchDependencyInfoRef = React.useRef<() => Promise<void>>();
+  const currentTodosRef = React.useRef<Todo[]>();
 
   // API Actions
   const fetchTodos = useCallback(async () => {
@@ -146,7 +147,7 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
 
       // Process data for image loading state - exact same logic as task list
       const processedData = data.map((t: Todo) => {
-        const prevTodo = state.todos.find((p) => p.id === t.id);
+        const prevTodo = currentTodosRef.current?.find((p) => p.id === t.id);
         if (!prevTodo && t.imageUrl === null) {
           return { ...t, imageUrl: undefined };
         }
@@ -162,7 +163,7 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
       });
       dispatch({ type: "SET_LOADING", payload: false });
     }
-  }, []);
+  }, []); // Keep empty - adding state.todos would cause infinite loops
 
   const fetchDependencyInfo = useCallback(async () => {
     try {
@@ -179,6 +180,7 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
   // Update refs
   fetchTodosRef.current = fetchTodos;
   fetchDependencyInfoRef.current = fetchDependencyInfo;
+  currentTodosRef.current = state.todos;
 
   const createTodo = useCallback(async (title: string, dueDate?: string | null, duration = 1) => {
     try {

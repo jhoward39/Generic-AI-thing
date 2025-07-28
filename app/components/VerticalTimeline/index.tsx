@@ -70,6 +70,8 @@ export default function VerticalTimeline({
         setSelectedTask(updatedTask);
       }
     }
+    // ESLint disabled: Adding selectedTask would cause infinite re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks, selectedTask?.id]);
 
   // Handle resize
@@ -217,8 +219,8 @@ export default function VerticalTimeline({
                   data-task-id={task.id}
                   className={`absolute cursor-pointer transition-all duration-200 ${
                     isDragged
-                      ? `z-[${CONFIG.Z_INDEX.DRAGGED_TASK}] opacity-75 scale-95`
-                      : `z-[${CONFIG.Z_INDEX.NORMAL_TASK}]`
+                      ? "z-[50] opacity-75 scale-95"
+                      : "z-[20]"
                   } ${isConnecting ? "ring-2 ring-blue-500" : ""} ${
                     isSelected ? "ring-2 ring-green-500" : ""
                   }`}
