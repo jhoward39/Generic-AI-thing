@@ -33,7 +33,7 @@ interface Todo {
 export default function TaskListPage() {
   const { isDark } = useTheme();
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [sortKey, setSortKey] = useState<"title" | "dueDate" | "duration" | "earliestStartDate">("dueDate");
+  const [sortKey, setSortKey] = useState<"title" | "dueDate" | "duration" | "earliestStartDate" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Add-task form state
@@ -167,43 +167,56 @@ export default function TaskListPage() {
   const sortedTodos = useMemo(() => {
     const sortArr = [...todos];
     
-    if (sortKey === "title") {
-      sortArr.sort((a, b) => {
+    // Primary grouping: uncompleted tasks first, then completed tasks
+    sortArr.sort((a, b) => {
+      const aDone = a.done || false;
+      const bDone = b.done || false;
+      
+      // If completion status is different, uncompleted comes first
+      if (aDone !== bDone) {
+        return aDone ? 1 : -1;
+      }
+      
+      // Within the same completion group, apply secondary sorting
+      if (sortKey === "title") {
         const titleA = a.title.toLowerCase();
         const titleB = b.title.toLowerCase();
         const diff = titleA.localeCompare(titleB);
         return sortOrder === "asc" ? diff : -diff;
-      });
-    } else if (sortKey === "dueDate") {
-      sortArr.sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        return sortOrder === "asc" ? diff : -diff;
-      });
-    } else if (sortKey === "duration") {
-      sortArr.sort((a, b) => (sortOrder === "asc" ? a.duration - b.duration : b.duration - a.duration));
-    } else if (sortKey === "earliestStartDate") {
-      sortArr.sort((a, b) => {
+      } else if (sortKey === "duration") {
+        return sortOrder === "asc" ? a.duration - b.duration : b.duration - a.duration;
+      } else if (sortKey === "earliestStartDate") {
         if (!a.earliestStartDate && !b.earliestStartDate) return 0;
         if (!a.earliestStartDate) return 1;
         if (!b.earliestStartDate) return -1;
         const diff = new Date(a.earliestStartDate).getTime() - new Date(b.earliestStartDate).getTime();
         return sortOrder === "asc" ? diff : -diff;
-      });
-    }
+      } else {
+        // Default sorting by due date (or when sortKey is "dueDate" or null)
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        return sortKey === "dueDate" ? (sortOrder === "asc" ? diff : -diff) : diff; // Always ascending for default
+      }
+    });
+    
     return sortArr;
   }, [todos, sortKey, sortOrder]);
 
-  const isOverdue = (dueDate?: string) => {
-    if (!dueDate) return false;
+  const isOverdue = (dueDate?: string, done?: boolean) => {
+    if (!dueDate || done) return false;
     return new Date(dueDate) < new Date();
   };
 
-  // Count overdue tasks
+  // Count overdue tasks (excluding completed ones)
   const overdueCount = useMemo(() => {
-    return todos.filter(todo => isOverdue(todo.dueDate)).length;
+    return todos.filter(todo => isOverdue(todo.dueDate, todo.done)).length;
+  }, [todos]);
+
+  // Count uncompleted tasks
+  const todoCount = useMemo(() => {
+    return todos.filter(todo => !todo.done).length;
   }, [todos]);
 
   const formatDate = (dateString?: string) => {
@@ -257,7 +270,7 @@ export default function TaskListPage() {
               <CustomCalendar
                 value={newDueDate}
                 onChange={(date) => setNewDueDate(date)}
-                className="w-full"
+                className="w-full p-3"
                 openDirection="down"
               />
             </div>
@@ -345,7 +358,7 @@ export default function TaskListPage() {
           )}
 
           {/* Compact Table View */}
-          <div className="border border-black dark:border-black rounded-lg overflow-hidden max-h-[calc(15*2.5rem)] overflow-y-auto">
+          <div className="border border-black dark:border-black rounded-lg overflow-hidden max-h-[calc(15*2.5rem)] overflow-y-auto mb-6">
             {/* Header */}
             <div className="bg-gray-100 dark:bg-gray-800 border-b border-black dark:border-black p-2 grid grid-cols-12 gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
               <div className="col-span-1"></div> {/* Icon */}
@@ -358,7 +371,7 @@ export default function TaskListPage() {
                     {sortOrder === "asc" ? "▲" : "▼"}
                   </span>
                 )}
-                Task ({todos.length})
+                Task ({todoCount} todo) ({todos.length} total)
               </div>
               <div 
                 className="col-span-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 px-1 py-1 rounded transition-colors flex items-center gap-1"
@@ -398,7 +411,7 @@ export default function TaskListPage() {
                 )}
                 Earliest Start
               </div>
-              <div className="col-span-2">Status</div>
+              <div className="col-span-1 px-1 py-1">Dependencies</div>
             </div>
 
             {/* Task Rows */}
@@ -433,13 +446,15 @@ export default function TaskListPage() {
                 <div className="col-span-4">
                   <div className="flex items-center gap-2 min-h-[1.5rem]">
                     <span className={`text-sm truncate ${
-                      isOverdue(todo.dueDate) 
-                        ? "text-red-600 dark:text-red-400" 
-                        : "text-gray-800 dark:text-gray-200"
+                      todo.done 
+                        ? "text-gray-500 dark:text-gray-500 line-through" 
+                        : isOverdue(todo.dueDate, todo.done) 
+                          ? "text-red-600 dark:text-red-400" 
+                          : "text-gray-800 dark:text-gray-200"
                     }`}>
                       {todo.title}
                     </span>
-                    {todo.isOnCriticalPath && (
+                    {todo.isOnCriticalPath && !todo.done && (
                       <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs flex-shrink-0">
                         CRITICAL
                       </span>
@@ -451,14 +466,16 @@ export default function TaskListPage() {
                 <div className="col-span-2">
                   <div className="flex items-center min-h-[1.5rem]">
                     <span className={`text-sm w-24 ${
-                      isOverdue(todo.dueDate) 
-                        ? "text-red-600 dark:text-red-400" 
-                        : "text-gray-700 dark:text-gray-300"
+                      todo.done 
+                        ? "text-gray-500 dark:text-gray-500 line-through" 
+                        : isOverdue(todo.dueDate, todo.done) 
+                          ? "text-red-600 dark:text-red-400" 
+                          : "text-gray-700 dark:text-gray-300"
                     }`}>
                       {todo.dueDate ? formatDate(todo.dueDate) : "No due date"}
                     </span>
                     <div className="flex-1 flex justify-start">
-                      {isOverdue(todo.dueDate) && (
+                      {isOverdue(todo.dueDate, todo.done) && (
                         <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs whitespace-nowrap">
                           OVERDUE
                         </span>
@@ -469,12 +486,22 @@ export default function TaskListPage() {
 
                 {/* Duration */}
                 <div className="col-span-1">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{todo.duration}d</span>
+                  <span className={`text-sm ${
+                    todo.done 
+                      ? "text-gray-500 dark:text-gray-500 line-through" 
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}>
+                    {todo.duration}d
+                  </span>
                 </div>
 
                 {/* Earliest Start */}
                 <div className="col-span-2">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className={`text-sm ${
+                    todo.done 
+                      ? "text-gray-500 dark:text-gray-500 line-through" 
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}>
                     {todo.earliestStartDate ? formatDate(todo.earliestStartDate) : "N/A"}
                   </span>
                 </div>
@@ -503,6 +530,7 @@ export default function TaskListPage() {
               handleDeleteTodo(id);
               setSelectedTodoForModal(null);
             }}
+            onDependencyUpdate={fetchTodos}
           />
         )}
       </div>

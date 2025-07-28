@@ -872,6 +872,7 @@ export default function VerticalTimeline({
           }}
           onTaskUpdate={onTaskUpdate}
           onTaskDelete={onTaskDelete}
+          onDependencyUpdate={onTaskUpdate}
         />
       )}
     </div>

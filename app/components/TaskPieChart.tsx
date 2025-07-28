@@ -2,16 +2,17 @@
 import { useState } from "react";
 
 interface TaskPieChartProps {
-  totalTasks: number;
+  uncompletedTasks: number;
   overdueTasks: number;
 }
 
-export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartProps) {
+export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPieChartProps) {
   const [hoveredSection, setHoveredSection] = useState<'overdue' | 'remaining' | null>(null);
   
-  const remainingTasks = totalTasks - overdueTasks;
-  const overduePercentage = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
-  const remainingPercentage = totalTasks > 0 ? (remainingTasks / totalTasks) * 100 : 0;
+  // remainingTasks = uncompleted tasks that are NOT overdue
+  const remainingTasks = uncompletedTasks - overdueTasks;
+  const overduePercentage = uncompletedTasks > 0 ? (overdueTasks / uncompletedTasks) * 100 : 0;
+  const remainingPercentage = uncompletedTasks > 0 ? (remainingTasks / uncompletedTasks) * 100 : 0;
 
   // Calculate SVG path for pie slices - 5% larger circle
   const radius = 42; // Increased from 40
@@ -29,25 +30,25 @@ export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartP
     } else if (hoveredSection === 'remaining') {
       return remainingTasks.toString();
     }
-    return totalTasks.toString();
+    return uncompletedTasks.toString();
   };
 
   const getCenterSubtext = () => {
     if (hoveredSection === 'overdue') {
       return 'overdue';
     } else if (hoveredSection === 'remaining') {
-      return 'remaining';
+      return 'on track';
     }
-    return 'total';
+    return 'todo';
   };
 
   return (
-    <div className="relative w-24 h-24">
-      <svg width="96" height="96" viewBox="0 0 96 96" className="transform -rotate-90">
+    <div className="relative w-28 h-28">
+      <svg width="112" height="112" viewBox="0 0 112 112" className="transform -rotate-90">
         {/* Background circle */}
         <circle
-          cx="48"
-          cy="48"
+          cx="56"
+          cy="56"
           r={radius}
           fill="none"
           stroke="#e5e7eb"
@@ -58,8 +59,8 @@ export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartP
         {/* Invisible hover areas for better responsiveness */}
         {overdueTasks > 0 && (
           <circle
-            cx="48"
-            cy="48"
+            cx="56"
+            cy="56"
             r={radius}
             fill="none"
             stroke="transparent"
@@ -74,8 +75,8 @@ export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartP
         
         {remainingTasks > 0 && (
           <circle
-            cx="48"
-            cy="48"
+            cx="56"
+            cy="56"
             r={radius}
             fill="none"
             stroke="transparent"
@@ -83,7 +84,7 @@ export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartP
             strokeDasharray={remainingStrokeDasharray}
             style={{
               transform: `rotate(${remainingRotation}deg)`,
-              transformOrigin: '48px 48px',
+              transformOrigin: '56px 56px',
               pointerEvents: 'all'
             }}
             className="cursor-pointer"
@@ -96,8 +97,8 @@ export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartP
         {/* Overdue section (dull red) */}
         {overdueTasks > 0 && (
           <circle
-            cx="48"
-            cy="48"
+            cx="56"
+            cy="56"
             r={radius}
             fill="none"
             stroke="#991b1b"
@@ -111,8 +112,8 @@ export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartP
         {/* Remaining section (dull green) */}
         {remainingTasks > 0 && (
           <circle
-            cx="48"
-            cy="48"
+            cx="56"
+            cy="56"
             r={radius}
             fill="none"
             stroke="#166534"
@@ -120,7 +121,7 @@ export default function TaskPieChart({ totalTasks, overdueTasks }: TaskPieChartP
             strokeDasharray={remainingStrokeDasharray}
             style={{
               transform: `rotate(${remainingRotation}deg)`,
-              transformOrigin: '48px 48px',
+              transformOrigin: '56px 56px',
               pointerEvents: 'none'
             }}
             className="transition-all duration-300 hover:stroke-green-700"

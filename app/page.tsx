@@ -61,17 +61,24 @@ export default function Home() {
 
   const hasPendingImages = useMemo(() => todos.some((t) => t.imageUrl === undefined), [todos]);
 
-  // Calculate overdue tasks
-  const overdueTasks = useMemo(() => {
+  // Calculate uncompleted and overdue tasks
+  const { uncompletedTasks, overdueTasks } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
     
-    return todos.filter(todo => {
-      if (!todo.dueDate) return false;
+    const uncompleted = todos.filter(todo => !todo.done);
+    
+    const overdue = todos.filter(todo => {
+      if (!todo.dueDate || todo.done) return false;
       const dueDate = new Date(todo.dueDate);
       dueDate.setHours(0, 0, 0, 0);
       return dueDate < today;
-    }).length;
+    });
+    
+    return {
+      uncompletedTasks: uncompleted.length,
+      overdueTasks: overdue.length
+    };
   }, [todos]);
 
   const fetchTodos = useCallback(async () => {
@@ -206,7 +213,7 @@ export default function Home() {
       {dependencyInfo && (
         <div className="absolute top-4 right-4 z-20">
           <TaskPieChart 
-            totalTasks={dependencyInfo.totalTasks}
+            uncompletedTasks={uncompletedTasks}
             overdueTasks={overdueTasks}
           />
         </div>
@@ -229,12 +236,12 @@ export default function Home() {
           placeholder="add a task..."
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200"
+          className="border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200"
         />
         <CustomCalendar
           value={newDueDate}
           onChange={(date) => setNewDueDate(date)}
-          className="w-32"
+          className="w-32 p-2"
           openDirection="up"
         />
         <input
@@ -242,11 +249,11 @@ export default function Home() {
           value={newDuration}
           onChange={(e) => setNewDuration(e.target.value)}
           min="1"
-          className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 w-16 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
+          className="border border-gray-300 dark:border-gray-600 rounded-lg p-2 w-16 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200"
         />
         <button
           onClick={handleAddTask}
-          className="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 px-3 py-1 rounded text-gray-900 dark:text-gray-100 transition-colors duration-200"
+          className=" btn-primary px-4 py-3"
           disabled={!newTitle.trim()}
         >
           Add

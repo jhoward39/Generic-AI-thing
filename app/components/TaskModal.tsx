@@ -32,17 +32,20 @@ interface TaskModalProps {
   onClose: () => void;
   onTaskUpdate: () => void;
   onTaskDelete: (id: number) => void;
+  onDependencyUpdate?: () => void;
 }
 
-export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskDelete }: TaskModalProps) {
+export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskDelete, onDependencyUpdate }: TaskModalProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [localDone, setLocalDone] = useState(false);
+  const [localDependencies, setLocalDependencies] = useState<{ dependsOn: { id: number; title: string; } }[]>([]);
 
-  // Update local done state when task prop changes
+  // Update local state when task prop changes
   useEffect(() => {
     if (task) {
       setLocalDone(task.done || false);
+      setLocalDependencies(task.dependencies || []);
     }
   }, [task]);
 
@@ -120,6 +123,36 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
       console.error("Failed to update todo:", error);
       // Revert local state if API call failed
       setLocalDone(currentDone);
+    }
+  };
+
+  const handleDeleteDependency = async (taskId: number, dependsOnId: number) => {
+    // Update local state immediately for UI feedback
+    setLocalDependencies(prev => prev.filter(dep => dep.dependsOn.id !== dependsOnId));
+    
+    try {
+      const response = await fetch("/api/todos/dependencies", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, dependsOnId }),
+      });
+      
+      if (response.ok) {
+        onTaskUpdate();
+        onDependencyUpdate?.();
+      } else {
+        // Revert local state if API call failed
+        if (task) {
+          setLocalDependencies(task.dependencies || []);
+        }
+        console.error("Failed to delete dependency");
+      }
+    } catch (error) {
+      // Revert local state if API call failed
+      if (task) {
+        setLocalDependencies(task.dependencies || []);
+      }
+      console.error("Failed to delete dependency:", error);
     }
   };
 
@@ -237,6 +270,7 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
                       setEditValue(dateString);
                       handleSaveEdit(task.id, 'dueDate', dateString);
                     }}
+                    className="w-full p-3"
                     placeholder="Select due date"
                     openDirection="down"
                   />
@@ -313,17 +347,26 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
             </div>
 
             {/* Dependencies */}
-            {task.dependencies.length > 0 && (
+            {localDependencies.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dependencies</label>
                 <div className="flex flex-wrap gap-2">
-                  {task.dependencies.map((dep, index) => (
-                    <span
-                      key={index}
-                      className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-sm"
+                  {localDependencies.map((dep) => (
+                    <div
+                      key={dep.dependsOn.id}
+                      className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                     >
-                      {dep.dependsOn.title}
-                    </span>
+                      <span>{dep.dependsOn.title}</span>
+                      <button
+                        onClick={() => handleDeleteDependency(task!.id, dep.dependsOn.id)}
+                        className="hover:bg-red-500 hover:text-white rounded-full p-0.5 transition-colors"
+                        title="Remove dependency"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>

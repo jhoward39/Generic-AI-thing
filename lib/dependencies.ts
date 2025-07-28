@@ -222,6 +222,7 @@ export function calculateCriticalPath(graph: DependencyGraph): {
     }
   }
 
+  console.log("Critical path:", criticalPath);
   return { criticalPath, earliestTimes, latestTimes };
 }
 
