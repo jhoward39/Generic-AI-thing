@@ -88,9 +88,7 @@ function HomeContent() {
       />
 
       {/* Add task bar */}
-      <div
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] dark:bg-gray-900 px-4 py-3 flex gap-2 items-center z-[99999] transition-colors duration-200"
-      >
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] dark:bg-gray-900 px-4 py-3 flex gap-2 items-center z-[99999] transition-colors duration-200">
         <input
           type="text"
           placeholder="add a task..."

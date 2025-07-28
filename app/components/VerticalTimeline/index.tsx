@@ -218,9 +218,7 @@ export default function VerticalTimeline({
                   }}
                   data-task-id={task.id}
                   className={`absolute cursor-pointer transition-all duration-200 ${
-                    isDragged
-                      ? "z-[50] opacity-75 scale-95"
-                      : "z-[20]"
+                    isDragged ? "z-[50] opacity-75 scale-95" : "z-[20]"
                   } ${isConnecting ? "ring-2 ring-blue-500" : ""} ${
                     isSelected ? "ring-2 ring-green-500" : ""
                   }`}
