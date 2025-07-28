@@ -1,49 +1,11 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useTheme } from "../layout";
+import { useTheme } from "../contexts/ThemeContext";
 import TaskModal from "./TaskModal";
+import { TimelineTask, VerticalTimelineProps } from "../../types";
 
-interface Task {
-  id: number;
-  title: string;
-  dueDate: string; // YYYY-MM-DD
-  createdAt: string;
-  duration: number;
-  earliestStartDate?: string;
-  isOnCriticalPath: boolean;
-  imageUrl?: string | null;
-  done?: boolean;
-  dependencies: {
-    dependsOn: {
-      id: number;
-      title: string;
-    };
-  }[];
-  dependentTasks: {
-    task: {
-      id: number;
-      title: string;
-    };
-  }[];
-}
 
-interface Dependency {
-  fromId: number;
-  toId: number;
-}
-
-interface VerticalTimelineProps {
-  tasks: Task[];
-  dependencies: Dependency[];
-  onTaskMove: (taskId: number, newDate: string) => void;
-  onCreateDependency: (
-    fromId: number,
-    toId: number,
-  ) => Promise<{ success: boolean; error?: string }>;
-  onTaskUpdate: () => void;
-  onTaskDelete: (id: number) => void;
-}
 
 /* ------------------------------------------------------------------
  * Constants
@@ -99,7 +61,7 @@ export default function VerticalTimeline({
   const [containerWidth, setContainerWidth] = useState(800);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TimelineTask | null>(null);
   const [isCommandHeld, setIsCommandHeld] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -115,8 +77,7 @@ export default function VerticalTimeline({
         setSelectedTask(updatedTask);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, selectedTask?.id]);
+  }, [tasks, selectedTask]);
 
   /* ----------------------- Date Range Calculation ----------------------- */
   const { startDate, endDate, dateRows } = useMemo(() => {
@@ -137,7 +98,7 @@ export default function VerticalTimeline({
     const start = addDays(minDate, -7);
     const end = addDays(maxDate, 7);
 
-    const rows: Array<{ date: Date; dateStr: string; tasks: Task[] }> = [];
+    const rows: Array<{ date: Date; dateStr: string; tasks: TimelineTask[] }> = [];
     let current = new Date(start);
 
     while (current <= end) {
@@ -169,7 +130,7 @@ export default function VerticalTimeline({
 
   // Unified coordinate calculation - same logic for both HTML positioning and SVG paths
   const getTaskCoordinates = useCallback(
-    (task: Task) => {
+    (task: TimelineTask) => {
       const row = dateRows.find((row) => row.tasks.some((t) => t.id === task.id));
       if (!row) return null;
 
@@ -287,7 +248,7 @@ export default function VerticalTimeline({
       y1: number,
       x2: number,
       y2: number,
-      task: Task,
+      task: TimelineTask,
       taskCoords: { x: number; y: number },
     ) => {
       const halfWidth = (TASK_NODE_WIDTH * zoom) / 2;
@@ -385,7 +346,7 @@ export default function VerticalTimeline({
 
         // Check if direct path would intersect with other tasks
         let needsRouting = false;
-        const conflictingTasks: { task: Task; coords: { x: number; y: number } }[] = [];
+        const conflictingTasks: { task: TimelineTask; coords: { x: number; y: number } }[] = [];
 
         for (const task of otherTasks) {
           const taskCoords = getTaskCoordinates(task);
@@ -593,7 +554,7 @@ export default function VerticalTimeline({
 
   /* ----------------------- Drag Handlers ----------------------- */
   const handleTaskMouseDown = useCallback(
-    (e: React.MouseEvent, task: Task) => {
+    (e: React.MouseEvent, task: TimelineTask) => {
       if (e.button === 0) {
         // Left click
         e.preventDefault();
@@ -612,13 +573,10 @@ export default function VerticalTimeline({
       } else if (e.button === 2) {
         // Right click for dependency
         e.preventDefault();
-        console.log("Right click on task:", task.id, "connectingFrom:", connectingFrom);
         if (connectingFrom === null) {
           setConnectingFrom(task.id);
-          setDependencyError(null); // Clear any previous error
-          console.log("Started connecting from task:", task.id);
+          setDependencyError(null);
         } else if (connectingFrom !== task.id) {
-          console.log("Creating dependency from", connectingFrom, "to", task.id);
           onCreateDependency(connectingFrom, task.id).then((result) => {
             if (result.success) {
               setConnectingFrom(null);

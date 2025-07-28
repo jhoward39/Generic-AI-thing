@@ -2,19 +2,14 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Calendar from "react-calendar";
-import { useTheme } from "../layout";
+import { useTheme } from "../contexts/ThemeContext";
+import { CustomCalendarProps } from "../../types";
 import "react-calendar/dist/Calendar.css";
 
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
 
-interface CustomCalendarProps {
-  value?: string;
-  onChange: (date: string) => void;
-  placeholder?: string;
-  className?: string;
-  openDirection?: "up" | "down";
-}
+
 
 export default function CustomCalendar({
   value,

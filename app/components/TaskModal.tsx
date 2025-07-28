@@ -2,39 +2,9 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import CustomCalendar from "./CustomCalendar";
+import { TaskModalProps } from "../../types";
 
-interface Task {
-  id: number;
-  title: string;
-  createdAt: string;
-  dueDate?: string;
-  duration: number;
-  earliestStartDate?: string;
-  isOnCriticalPath: boolean;
-  imageUrl?: string | null;
-  done?: boolean;
-  dependencies: {
-    dependsOn: {
-      id: number;
-      title: string;
-    };
-  }[];
-  dependentTasks: {
-    task: {
-      id: number;
-      title: string;
-    };
-  }[];
-}
 
-interface TaskModalProps {
-  task: Task | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onTaskUpdate: () => void;
-  onTaskDelete: (id: number) => void;
-  onDependencyUpdate?: () => void;
-}
 
 export default function TaskModal({
   task,
@@ -76,7 +46,7 @@ export default function TaskModal({
     };
   }, [isOpen, onClose]);
 
-  const isOverdue = (dueDate?: string) => {
+  const isOverdue = (dueDate?: string | null) => {
     if (!dueDate || localDone) return false; // Use localDone for immediate feedback
     return new Date(dueDate) < new Date();
   };

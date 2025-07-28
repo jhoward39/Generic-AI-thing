@@ -1,3 +1,5 @@
+import { CONFIG } from "./config";
+
 /**
  * Add business days to a date (skipping weekends)
  * @param date Starting date
@@ -22,11 +24,11 @@ export function addBusinessDays(date: Date, businessDays: number): Date {
 }
 
 /**
- * Get default due date (5 business days from now)
+ * Get default due date (configured business days from now)
  * @param fromDate Optional starting date (defaults to now)
- * @returns Date that is 5 business days from the starting date
+ * @returns Date that is configured business days from the starting date
  */
 export function getDefaultDueDate(fromDate?: Date): Date {
   const startDate = fromDate || new Date();
-  return addBusinessDays(startDate, 5);
+  return addBusinessDays(startDate, CONFIG.DEFAULT_DUE_DATE_DAYS_AHEAD);
 }

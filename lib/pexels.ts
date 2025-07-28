@@ -1,3 +1,5 @@
+import { CONFIG } from "./config";
+
 export async function fetchImageUrl(query: string): Promise<string | null> {
   const apiKey = process.env.PEXELS_API_KEY;
   if (!apiKey) {
@@ -7,7 +9,7 @@ export async function fetchImageUrl(query: string): Promise<string | null> {
 
   const url = new URL("https://api.pexels.com/v1/search");
   url.searchParams.set("query", query);
-  url.searchParams.set("per_page", "1");
+  url.searchParams.set("per_page", CONFIG.PEXELS_RESULTS_PER_PAGE.toString());
 
   try {
     const res = await fetch(url.toString(), {

@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useTheme } from "../layout";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function Header() {
   const pathname = usePathname();

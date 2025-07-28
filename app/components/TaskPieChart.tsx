@@ -1,10 +1,6 @@
 "use client";
 import { useState } from "react";
-
-interface TaskPieChartProps {
-  uncompletedTasks: number;
-  overdueTasks: number;
-}
+import { TaskPieChartProps } from "../../types";
 
 export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPieChartProps) {
   const [hoveredSection, setHoveredSection] = useState<"overdue" | "remaining" | null>(null);

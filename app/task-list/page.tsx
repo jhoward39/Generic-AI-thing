@@ -4,30 +4,10 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import CustomCalendar from "../components/CustomCalendar";
 import TaskModal from "../components/TaskModal";
+import { Todo } from "../../types";
+import { CONFIG } from "../../lib/config";
 
-interface Todo {
-  id: number;
-  title: string;
-  createdAt: string;
-  dueDate?: string;
-  duration: number;
-  earliestStartDate?: string;
-  isOnCriticalPath: boolean;
-  imageUrl?: string | null;
-  done?: boolean;
-  dependencies: {
-    dependsOn: {
-      id: number;
-      title: string;
-    };
-  }[];
-  dependentTasks: {
-    task: {
-      id: number;
-      title: string;
-    };
-  }[];
-}
+
 
 export default function TaskListPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -39,25 +19,9 @@ export default function TaskListPage() {
   // Add-task form state
   const [newTodo, setNewTodo] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
-  const [newDuration, setNewDuration] = useState("1");
+  const [newDuration, setNewDuration] = useState(CONFIG.DEFAULT_TASK_DURATION.toString());
 
   // Dependency management state
-  const [dependencyInfo, setDependencyInfo] = useState<{
-    dependencies: unknown[];
-    criticalPath: {
-      criticalPath: {
-        id: number;
-        title: string;
-        duration: number;
-        earliestStart: number;
-        latestStart: number;
-        slack: number;
-      }[];
-      totalDuration: number;
-    };
-    totalTasks: number;
-  } | null>(null);
-  void dependencyInfo; // Intentionally unused
   const [selectedTask, setSelectedTask] = useState<number | null>(null);
   const [selectedDependency, setSelectedDependency] = useState<number | null>(null);
   const [showDependencies, setShowDependencies] = useState(false);
@@ -88,28 +52,17 @@ export default function TaskListPage() {
     }
   }, []);
 
-  const fetchDependencyInfo = useCallback(async () => {
-    try {
-      const res = await fetch("/api/todos/dependencies");
-      if (res.ok) {
-        const data = await res.json();
-        setDependencyInfo(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch dependency info:", error);
-    }
-  }, []);
+
 
   // Initial load
   useEffect(() => {
     fetchTodos();
-    fetchDependencyInfo();
-  }, [fetchTodos, fetchDependencyInfo]);
+  }, [fetchTodos]);
 
   // Polling while images pending
   useEffect(() => {
     if (!hasPendingImages) return;
-    const id = setInterval(fetchTodos, 3000);
+    const id = setInterval(fetchTodos, CONFIG.POLLING_INTERVAL_MS);
     return () => clearInterval(id);
   }, [hasPendingImages, fetchTodos]);
 
@@ -151,9 +104,8 @@ export default function TaskListPage() {
       });
       setNewTodo("");
       setNewDueDate("");
-      setNewDuration("1");
+      setNewDuration(CONFIG.DEFAULT_TASK_DURATION.toString());
       fetchTodos();
-      fetchDependencyInfo();
     } catch (error) {
       console.error("Failed to add todo:", error);
     }
@@ -176,7 +128,6 @@ export default function TaskListPage() {
       setSelectedTask(null);
       setSelectedDependency(null);
       fetchTodos();
-      fetchDependencyInfo();
     } catch (error) {
       console.error("Failed to add dependency:", error);
     }
@@ -224,7 +175,7 @@ export default function TaskListPage() {
     return sortArr;
   }, [todos, sortKey, sortOrder]);
 
-  const isOverdue = (dueDate?: string, done?: boolean) => {
+  const isOverdue = (dueDate?: string | null, done?: boolean) => {
     if (!dueDate || done) return false;
     return new Date(dueDate) < new Date();
   };
@@ -317,7 +268,7 @@ export default function TaskListPage() {
               onClick={() => setShowDependencies(!showDependencies)}
               className="border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-green-900 dark:hover:bg-blue-700 hover:text-white hover:border-green-900 dark:hover:border-blue-700 rounded-lg px-4 py-2 transition-colors duration-200"
             >
-              {showDependencies ? "Hide" : "Show"} Dependencies
+              {showDependencies ? "Hide" : "Show"} Dependency Management
             </button>
           </div>
 
