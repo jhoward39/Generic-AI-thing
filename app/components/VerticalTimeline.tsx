@@ -73,9 +73,7 @@ function addDays(date: Date, days: number): Date {
   return result;
 }
 
-function getDaysBetween(start: Date, end: Date): number {
-  return Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-}
+
 
 /* ------------------------------------------------------------------
  * Component
@@ -95,7 +93,7 @@ export default function VerticalTimeline({
   const [connectingFrom, setConnectingFrom] = useState<number | null>(null);
   const [minimapDragging, setMinimapDragging] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
-  const [forceUpdate, setForceUpdate] = useState(0);
+
   const [containerWidth, setContainerWidth] = useState(800);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -115,6 +113,7 @@ export default function VerticalTimeline({
         setSelectedTask(updatedTask);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks, selectedTask?.id]);
 
   /* ----------------------- Date Range Calculation ----------------------- */
@@ -157,6 +156,9 @@ export default function VerticalTimeline({
     };
   }, [tasks]);
 
+  void startDate; // Intentionally unused
+  void endDate; // Intentionally unused
+
   /* ----------------------- Layout Calculations ----------------------- */
   const rowHeight = BASE_ROW_HEIGHT * zoom;
   const totalHeight = dateRows.length * rowHeight;
@@ -191,7 +193,7 @@ export default function VerticalTimeline({
 
       return { x: absoluteX, y: absoluteY };
     },
-    [dateRows, rowHeight, containerWidth, MINIMAP_WIDTH],
+    [dateRows, rowHeight, containerWidth],
   );
 
   // Calculate clean edge connection points with proper top/bottom logic and perpendicular direction vectors
@@ -332,22 +334,9 @@ export default function VerticalTimeline({
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [dependencies, tasks, getTaskCoordinates, getBoxEdgePointWithDirection, forceUpdate, zoom]);
+  }, [dependencies, tasks, getTaskCoordinates, getBoxEdgePointWithDirection, zoom]);
 
-  // Force dependency path updates when tasks or dependencies change
-  useEffect(() => {
-    setForceUpdate((prev) => prev + 1);
-  }, [tasks, dependencies]);
-
-  // Smooth updates using requestAnimationFrame for DOM changes
-  useEffect(() => {
-    const update = () => {
-      setForceUpdate((prev) => prev + 1);
-    };
-
-    const rafId = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(rafId);
-  }, [tasks]);
+  // Dependencies and tasks changes are handled automatically by React re-renders
 
   /* ----------------------- Scroll to Today on Mount ----------------------- */
   useEffect(() => {
@@ -410,8 +399,6 @@ export default function VerticalTimeline({
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
       setScrollTop(containerRef.current.scrollTop);
-      // Force dependency paths to recalculate on scroll
-      setForceUpdate((prev) => prev + 1);
     }
   }, []);
 
@@ -526,10 +513,6 @@ export default function VerticalTimeline({
       const targetDate = dateRows[clampedRowIndex]?.dateStr;
       if (targetDate) {
         onTaskMove(draggedTask, targetDate);
-        // Trigger immediate dependency path update after task move
-        requestAnimationFrame(() => {
-          setForceUpdate((prev) => prev + 1);
-        });
       }
     }
 
@@ -692,7 +675,6 @@ export default function VerticalTimeline({
   useEffect(() => {
     if (containerRef.current) {
       setContainerWidth(containerRef.current.clientWidth);
-      setForceUpdate((prev) => prev + 1);
     }
   }, [tasks, dependencies]);
 
@@ -824,7 +806,7 @@ export default function VerticalTimeline({
             </defs>
 
             {/* Dependency arrows */}
-            {dependencyPaths.map((dep, index) => {
+            {dependencyPaths.map((dep) => {
               // Check if both tasks are on critical path
               const isCriticalPath = dep!.fromTask.isOnCriticalPath && dep!.toTask.isOnCriticalPath;
 
@@ -890,7 +872,7 @@ export default function VerticalTimeline({
               </div>
 
               {/* Tasks in this row */}
-              {row.tasks.map((task, taskIndex) => (
+              {row.tasks.map((task) => (
                 <div
                   ref={(el) => {
                     if (el) taskRefs.current.set(task.id, el);

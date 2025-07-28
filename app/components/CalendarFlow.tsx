@@ -71,8 +71,8 @@ export default function CalendarFlow({
   /* ------------------------- Nodes & Edges ------------------------- */
   const { nodesInit, edgesInit } = useMemo(() => {
     const perDayCount: Record<string, number> = {};
-    const nodes: any[] = [];
-    const edges: any[] = [];
+    const nodes: unknown[] = [];
+    const edges: unknown[] = [];
 
     const addStackedPos = (row: number, col: number) => {
       const key = `${row}-${col}`;
@@ -127,17 +127,17 @@ export default function CalendarFlow({
 
   /* -------------------------- Event handlers -------------------------- */
   const handleConnect = useCallback(
-    (connection: any) => {
+    (connection: { source?: string; target?: string }) => {
       if (connection.source && connection.target) {
         onCreateDependency(parseInt(connection.source), parseInt(connection.target));
-        setEdges((eds: any[]) => addEdge(connection, eds));
+        setEdges((eds: unknown[]) => addEdge(connection, eds));
       }
     },
     [onCreateDependency, setEdges],
   );
 
   const handleNodeDragStop = useCallback(
-    (_e: any, node: any) => {
+    (_e: unknown, node: { id: string; position: { x: number; y: number } }) => {
       const col = Math.min(6, Math.max(0, Math.floor(node.position.x / CELL_W)));
       const row = Math.max(0, Math.floor((node.position.y - HEADER_H) / CELL_H));
 

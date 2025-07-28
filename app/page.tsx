@@ -12,12 +12,13 @@ interface Todo {
   imageUrl?: string | null;
   done?: boolean;
   isOnCriticalPath: boolean;
+  earliestStartDate?: string | null;
   dependencies: { dependsOn: { id: number } }[];
   dependentTasks: { task: { id: number } }[];
 }
 
 interface DependencyInfo {
-  criticalPath: { criticalPath: any[]; totalDuration: number };
+  criticalPath: { criticalPath: { id: number; title: string; duration: number; earliestStart: number; latestStart: number; slack: number }[]; totalDuration: number };
   totalTasks: number;
 }
 
@@ -175,7 +176,7 @@ export default function Home() {
         dueDate: t.dueDate!.split("T")[0], // Ensure YYYY-MM-DD format (strip time if present)
         createdAt: new Date().toISOString(), // Add createdAt
         duration: t.duration,
-        earliestStartDate: undefined, // This would come from dependency calculation
+        earliestStartDate: t.earliestStartDate ? t.earliestStartDate.split("T")[0] : undefined,
         isOnCriticalPath: t.isOnCriticalPath, // Use actual critical path data from database
         imageUrl: t.imageUrl,
         done: t.done, // Add done property

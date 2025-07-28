@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import Link from "next/link";
-import { useTheme } from "../layout";
+import Image from "next/image";
 import CustomCalendar from "../components/CustomCalendar";
 import TaskModal from "../components/TaskModal";
 
@@ -31,7 +30,6 @@ interface Todo {
 }
 
 export default function TaskListPage() {
-  const { isDark } = useTheme();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [sortKey, setSortKey] = useState<
     "title" | "dueDate" | "duration" | "earliestStartDate" | null
@@ -44,17 +42,18 @@ export default function TaskListPage() {
   const [newDuration, setNewDuration] = useState("1");
 
   // Dependency management state
-  const [dependencyInfo, setDependencyInfo] = useState<any | null>(null);
+  const [dependencyInfo, setDependencyInfo] = useState<{
+    dependencies: unknown[];
+    criticalPath: { criticalPath: { id: number; title: string; duration: number; earliestStart: number; latestStart: number; slack: number }[]; totalDuration: number };
+    totalTasks: number;
+  } | null>(null);
+  void dependencyInfo; // Intentionally unused
   const [selectedTask, setSelectedTask] = useState<number | null>(null);
   const [selectedDependency, setSelectedDependency] = useState<number | null>(null);
   const [showDependencies, setShowDependencies] = useState(false);
 
   // Modal state
   const [selectedTodoForModal, setSelectedTodoForModal] = useState<Todo | null>(null);
-
-  // Custom selectors state
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [showOrderDropdown, setShowOrderDropdown] = useState(false);
 
   // Flag indicating whether any images are still being fetched
   const hasPendingImages = useMemo(() => todos.some((t) => t.imageUrl === undefined), [todos]);
@@ -65,7 +64,7 @@ export default function TaskListPage() {
       const data = await res.json();
 
       setTodos((prev) => {
-        const mapped: Todo[] = data.map((t: any) => {
+        const mapped: Todo[] = data.map((t: Todo) => {
           const prevTodo = prev.find((p) => p.id === t.id);
           if (!prevTodo && t.imageUrl === null) {
             return { ...t, imageUrl: undefined };
@@ -95,7 +94,7 @@ export default function TaskListPage() {
   useEffect(() => {
     fetchTodos();
     fetchDependencyInfo();
-  }, [fetchTodos]);
+  }, [fetchTodos, fetchDependencyInfo]);
 
   // Polling while images pending
   useEffect(() => {
@@ -112,6 +111,7 @@ export default function TaskListPage() {
         setSelectedTodoForModal(updatedTodo);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todos, selectedTodoForModal?.id]);
 
   // Handle column header clicks for sorting
@@ -243,18 +243,7 @@ export default function TaskListPage() {
     }
   };
 
-  const handleRemoveDependency = async (taskId: number, dependsOnId: number) => {
-    try {
-      await fetch("/api/todos/dependencies", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, dependsOnId }),
-      });
-      fetchTodos();
-    } catch (error) {
-      console.error("Failed to remove dependency:", error);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
@@ -458,9 +447,11 @@ export default function TaskListPage() {
                     </div>
                   )}
                   {todo.imageUrl && (
-                    <img
+                    <Image
                       src={todo.imageUrl}
                       alt={todo.title}
+                      width={24}
+                      height={24}
                       className="w-6 h-6 object-cover rounded border border-black dark:border-black"
                     />
                   )}

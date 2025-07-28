@@ -232,15 +232,23 @@ export async function updateTaskScheduling(): Promise<void> {
   const graph = await buildDependencyGraph();
   const { criticalPath, earliestTimes } = calculateCriticalPath(graph);
 
+  // Use today as the project start date
+  const projectStartDate = new Date();
+  projectStartDate.setHours(0, 0, 0, 0); // Set to start of day
+
   // Update all tasks with calculated values
   for (const [taskId] of Array.from(graph.nodes.entries())) {
     const earliestStart = earliestTimes.get(taskId) || 0;
     const isOnCriticalPath = criticalPath.includes(taskId);
 
+    // Calculate earliest start date from project start date
+    const earliestStartDate = new Date(projectStartDate);
+    earliestStartDate.setDate(projectStartDate.getDate() + earliestStart);
+
     await prisma.todo.update({
       where: { id: taskId },
       data: {
-        earliestStartDate: new Date(Date.now() + earliestStart * 24 * 60 * 60 * 1000),
+        earliestStartDate,
         isOnCriticalPath,
       },
     });

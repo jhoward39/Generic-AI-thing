@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import CustomCalendar from "./CustomCalendar";
 
 interface Task {
@@ -229,9 +230,11 @@ export default function TaskModal({
               </div>
             )}
             {task.imageUrl && (
-              <img
+              <Image
                 src={task.imageUrl}
                 alt={task.title}
+                width={384}
+                height={192}
                 className="w-full h-48 object-cover rounded-lg border border-black dark:border-white"
               />
             )}
@@ -254,7 +257,7 @@ export default function TaskModal({
                   <input
                     type="checkbox"
                     checked={localDone}
-                    onChange={(e) => {
+                    onChange={() => {
                       handleToggleDone(task.id, localDone);
                     }}
                     className="sr-only"

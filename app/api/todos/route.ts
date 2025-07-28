@@ -100,7 +100,8 @@ export async function POST(request: Request) {
     await updateTaskScheduling();
 
     // Return the todo but intentionally omit imageUrl so the client knows the image is still loading
-    const { imageUrl: _imageUrl, ...todoResponse } = todo;
+    const { imageUrl, ...todoResponse } = todo;
+    void imageUrl; // Mark as intentionally unused
     return NextResponse.json(todoResponse, { status: 201 });
   } catch (error) {
     console.error("Error creating todo:", error);
