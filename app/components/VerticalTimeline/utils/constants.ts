@@ -20,4 +20,4 @@ export const TIMELINE_STYLES = {
   MINIMAP_DOT_MIN_SIZE: 6,
   MINIMAP_DOT_MAX_SIZE: 12,
   DEPENDENCY_LINE_OFFSET: 10,
-} as const; 
+} as const;

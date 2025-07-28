@@ -32,7 +32,10 @@ interface TimelineContextType {
     createTodo: (title: string, dueDate?: string | null, duration?: number) => Promise<void>;
     updateTodo: (id: number, updates: Partial<Todo>) => Promise<void>;
     deleteTodo: (id: number) => Promise<void>;
-    createDependency: (fromId: number, toId: number) => Promise<{ success: boolean; error?: string }>;
+    createDependency: (
+      fromId: number,
+      toId: number,
+    ) => Promise<{ success: boolean; error?: string }>;
     moveTodo: (id: number, newDate: string) => Promise<void>;
   };
   derived: {
@@ -51,38 +54,36 @@ function timelineReducer(state: TimelineState, action: TimelineAction): Timeline
   switch (action.type) {
     case "SET_LOADING":
       return { ...state, loading: action.payload };
-    
+
     case "SET_ERROR":
       return { ...state, error: action.payload };
-    
+
     case "SET_TODOS":
-      return { 
-        ...state, 
+      return {
+        ...state,
         todos: action.payload,
         hasPendingImages: action.payload.some((t) => t.imageUrl === undefined),
         loading: false,
-        error: null
+        error: null,
       };
-    
+
     case "SET_DEPENDENCY_INFO":
       return { ...state, dependencyInfo: action.payload };
-    
+
     case "UPDATE_TODO":
       return {
         ...state,
         todos: state.todos.map((todo) =>
-          todo.id === action.payload.id
-            ? { ...todo, ...action.payload.updates }
-            : todo
+          todo.id === action.payload.id ? { ...todo, ...action.payload.updates } : todo,
         ),
       };
-    
+
     case "DELETE_TODO":
       return {
         ...state,
         todos: state.todos.filter((todo) => todo.id !== action.payload),
       };
-    
+
     case "ADD_TODO":
       const newTodos = [action.payload, ...state.todos];
       return {
@@ -90,7 +91,7 @@ function timelineReducer(state: TimelineState, action: TimelineAction): Timeline
         todos: newTodos,
         hasPendingImages: newTodos.some((t) => t.imageUrl === undefined),
       };
-    
+
     default:
       return state;
   }
@@ -137,12 +138,12 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
   const fetchTodos = useCallback(async () => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
-      
+
       const res = await fetch("/api/todos");
       if (!res.ok) throw new Error("Failed to fetch todos");
-      
+
       const data: Todo[] = await res.json();
-      
+
       // Process data for image loading state - exact same logic as task list
       const processedData = data.map((t: Todo) => {
         const prevTodo = state.todos.find((p) => p.id === t.id);
@@ -152,10 +153,13 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
 
         return t;
       });
-      
+
       dispatch({ type: "SET_TODOS", payload: processedData });
     } catch (error) {
-      dispatch({ type: "SET_ERROR", payload: error instanceof Error ? error.message : "Unknown error" });
+      dispatch({
+        type: "SET_ERROR",
+        payload: error instanceof Error ? error.message : "Unknown error",
+      });
       dispatch({ type: "SET_LOADING", payload: false });
     }
   }, []);
@@ -179,22 +183,25 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
   const createTodo = useCallback(async (title: string, dueDate?: string | null, duration = 1) => {
     try {
       dispatch({ type: "SET_ERROR", payload: null });
-      
+
       const res = await fetch("/api/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, dueDate, duration }),
       });
-      
+
       if (!res.ok) throw new Error("Failed to create todo");
-      
+
       const newTodo = await res.json();
       dispatch({ type: "ADD_TODO", payload: newTodo });
-      
+
       // Refresh dependency info
       await fetchDependencyInfoRef.current?.();
     } catch (error) {
-      dispatch({ type: "SET_ERROR", payload: error instanceof Error ? error.message : "Failed to create todo" });
+      dispatch({
+        type: "SET_ERROR",
+        payload: error instanceof Error ? error.message : "Failed to create todo",
+      });
       throw error;
     }
   }, []);
@@ -202,24 +209,27 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
   const updateTodo = useCallback(async (id: number, updates: Partial<Todo>) => {
     try {
       dispatch({ type: "SET_ERROR", payload: null });
-      
+
       const res = await fetch(`/api/todos/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
-      
+
       if (!res.ok) throw new Error("Failed to update todo");
-      
+
       dispatch({ type: "UPDATE_TODO", payload: { id, updates } });
-      
+
       // Refresh full data if this might affect dependencies
       if (updates.dueDate !== undefined) {
         await fetchTodosRef.current?.();
         await fetchDependencyInfoRef.current?.();
       }
     } catch (error) {
-      dispatch({ type: "SET_ERROR", payload: error instanceof Error ? error.message : "Failed to update todo" });
+      dispatch({
+        type: "SET_ERROR",
+        payload: error instanceof Error ? error.message : "Failed to update todo",
+      });
       throw error;
     }
   }, []);
@@ -227,46 +237,55 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
   const deleteTodo = useCallback(async (id: number) => {
     try {
       dispatch({ type: "SET_ERROR", payload: null });
-      
+
       const res = await fetch(`/api/todos/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete todo");
-      
+
       dispatch({ type: "DELETE_TODO", payload: id });
       await fetchDependencyInfoRef.current?.();
     } catch (err) {
-      dispatch({ type: "SET_ERROR", payload: err instanceof Error ? err.message : "Failed to delete todo" });
+      dispatch({
+        type: "SET_ERROR",
+        payload: err instanceof Error ? err.message : "Failed to delete todo",
+      });
     }
   }, []);
 
-  const createDependency = useCallback(async (fromId: number, toId: number): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const response = await fetch("/api/todos/dependencies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: toId, dependsOnId: fromId }),
-      });
+  const createDependency = useCallback(
+    async (fromId: number, toId: number): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const response = await fetch("/api/todos/dependencies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId: toId, dependsOnId: fromId }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        return { success: false, error: errorData.error || "Failed to create dependency" };
+        if (!response.ok) {
+          const errorData = await response.json();
+          return { success: false, error: errorData.error || "Failed to create dependency" };
+        }
+
+        await fetchTodosRef.current?.();
+        await fetchDependencyInfoRef.current?.();
+        return { success: true };
+      } catch {
+        return { success: false, error: "Network error occurred" };
       }
+    },
+    [],
+  ); // Remove circular dependencies, use refs instead
 
-      await fetchTodosRef.current?.();
-      await fetchDependencyInfoRef.current?.();
-      return { success: true };
-    } catch {
-      return { success: false, error: "Network error occurred" };
-    }
-  }, []); // Remove circular dependencies, use refs instead
-
-  const moveTodo = useCallback(async (id: number, newDate: string) => {
-    await updateTodo(id, { dueDate: newDate });
-  }, [updateTodo]);
+  const moveTodo = useCallback(
+    async (id: number, newDate: string) => {
+      await updateTodo(id, { dueDate: newDate });
+    },
+    [updateTodo],
+  );
 
   // Derived state
   const timelineTasks: TimelineTask[] = React.useMemo(() => {
-    const todoMap = new Map(state.todos.map(t => [t.id, t]));
-    
+    const todoMap = new Map(state.todos.map((t) => [t.id, t]));
+
     return state.todos
       .filter((t) => t.dueDate && t.dueDate.trim() !== "")
       .map((t) => ({
@@ -321,15 +340,26 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
   }, [state.todos]);
 
   // Memoize actions to prevent infinite re-renders
-  const actions = React.useMemo(() => ({
-    fetchTodos,
-    fetchDependencyInfo,
-    createTodo,
-    updateTodo,
-    deleteTodo,
-    createDependency,
-    moveTodo,
-  }), [fetchTodos, fetchDependencyInfo, createTodo, updateTodo, deleteTodo, createDependency, moveTodo]);
+  const actions = React.useMemo(
+    () => ({
+      fetchTodos,
+      fetchDependencyInfo,
+      createTodo,
+      updateTodo,
+      deleteTodo,
+      createDependency,
+      moveTodo,
+    }),
+    [
+      fetchTodos,
+      fetchDependencyInfo,
+      createTodo,
+      updateTodo,
+      deleteTodo,
+      createDependency,
+      moveTodo,
+    ],
+  );
 
   const contextValue: TimelineContextType = {
     state,
@@ -342,9 +372,5 @@ export function TimelineProvider({ children }: TimelineProviderProps) {
     },
   };
 
-  return (
-    <TimelineContext.Provider value={contextValue}>
-      {children}
-    </TimelineContext.Provider>
-  );
-} 
+  return <TimelineContext.Provider value={contextValue}>{children}</TimelineContext.Provider>;
+}

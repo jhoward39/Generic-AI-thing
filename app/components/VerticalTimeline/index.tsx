@@ -23,7 +23,7 @@ export default function VerticalTimeline({
   onTaskDelete,
 }: VerticalTimelineProps) {
   const { isDark } = useTheme();
-  
+
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const taskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -35,18 +35,21 @@ export default function VerticalTimeline({
   const [selectedTask, setSelectedTask] = useState<TimelineTask | null>(null);
 
   // Custom hooks
-  const { dateRows, rowHeight, totalHeight, taskNodeWidth, taskNodeHeight } = useTimelineLayout(tasks, zoom);
-  
-  const { 
-    draggedTask, 
-    connectingFrom, 
+  const { dateRows, rowHeight, totalHeight, taskNodeWidth, taskNodeHeight } = useTimelineLayout(
+    tasks,
+    zoom,
+  );
+
+  const {
+    draggedTask,
+    connectingFrom,
     dependencyError,
     handleTaskMouseDown,
     handleTaskMouseMove,
     handleTaskMouseUp,
     handleKeyDown,
     handleKeyUp,
-    handleWindowBlur
+    handleWindowBlur,
   } = useTimelineInteractions({
     tasks,
     onCreateDependency,
@@ -56,7 +59,7 @@ export default function VerticalTimeline({
     taskNodeWidth,
     taskNodeHeight,
     rowHeight,
-    dateRows
+    dateRows,
   });
 
   // Update selectedTask when tasks change (to reflect image loading)
@@ -128,11 +131,14 @@ export default function VerticalTimeline({
     // Don't close modal - let user see the updates (like image loading)
   }, [onTaskUpdate]);
 
-  const handleTaskDelete = useCallback((id: number) => {
-    onTaskDelete(id);
-    setShowTaskModal(false);
-    setSelectedTask(null);
-  }, [onTaskDelete]);
+  const handleTaskDelete = useCallback(
+    (id: number) => {
+      onTaskDelete(id);
+      setShowTaskModal(false);
+      setSelectedTask(null);
+    },
+    [onTaskDelete],
+  );
 
   const handleTimelineClick = useCallback(
     (e: React.MouseEvent) => {
@@ -146,7 +152,7 @@ export default function VerticalTimeline({
         }
       }
     },
-    [connectingFrom]
+    [connectingFrom],
   );
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -156,11 +162,7 @@ export default function VerticalTimeline({
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
       {/* Header with zoom controls */}
-      <TimelineHeader 
-        zoom={zoom}
-        onZoomChange={setZoom}
-        isDark={isDark}
-      />
+      <TimelineHeader zoom={zoom} onZoomChange={setZoom} isDark={isDark} />
 
       {/* Main timeline container */}
       <div
@@ -173,7 +175,7 @@ export default function VerticalTimeline({
         onContextMenu={handleContextMenu}
       >
         {/* Timeline grid background */}
-        <TimelineGrid 
+        <TimelineGrid
           dateRows={dateRows}
           rowHeight={rowHeight}
           totalHeight={totalHeight}
@@ -187,7 +189,9 @@ export default function VerticalTimeline({
 
         {/* Dependency error message */}
         {dependencyError && (
-          <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-md z-[${CONFIG.Z_INDEX.MODAL}]`}>
+          <div
+            className={`fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-md z-[${CONFIG.Z_INDEX.MODAL}]`}
+          >
             {dependencyError}
           </div>
         )}
@@ -199,7 +203,7 @@ export default function VerticalTimeline({
               const isSelected = selectedTask?.id === task.id;
               const isDragged = draggedTask === task.id;
               const isConnecting = connectingFrom === task.id;
-              
+
               return (
                 <div
                   key={task.id}
@@ -212,14 +216,14 @@ export default function VerticalTimeline({
                   }}
                   data-task-id={task.id}
                   className={`absolute cursor-pointer transition-all duration-200 ${
-                    isDragged ? `z-[${CONFIG.Z_INDEX.DRAGGED_TASK}] opacity-75 scale-95` : `z-[${CONFIG.Z_INDEX.NORMAL_TASK}]`
-                  } ${
-                    isConnecting ? "ring-2 ring-blue-500" : ""
-                  } ${
+                    isDragged
+                      ? `z-[${CONFIG.Z_INDEX.DRAGGED_TASK}] opacity-75 scale-95`
+                      : `z-[${CONFIG.Z_INDEX.NORMAL_TASK}]`
+                  } ${isConnecting ? "ring-2 ring-blue-500" : ""} ${
                     isSelected ? "ring-2 ring-green-500" : ""
                   }`}
                   style={{
-                    left: `${CONFIG.TIMELINE_LEFT_MARGIN + (taskIndex * CONFIG.TASK_SPACING)}px`,
+                    left: `${CONFIG.TIMELINE_LEFT_MARGIN + taskIndex * CONFIG.TASK_SPACING}px`,
                     top: `${rowIndex * rowHeight + CONFIG.TASK_VERTICAL_OFFSET}px`,
                     width: taskNodeWidth,
                     height: taskNodeHeight,
@@ -232,17 +236,17 @@ export default function VerticalTimeline({
                     }
                   }}
                 >
-                  <div className={`w-full h-full rounded-lg border-2 p-2 text-xs overflow-hidden ${
-                    task.isOnCriticalPath
-                      ? "border-orange-500 bg-orange-100 dark:bg-orange-900"
-                      : task.done
-                        ? "border-green-500 bg-green-100 dark:bg-green-900"
-                        : "border-blue-500 bg-blue-100 dark:bg-blue-900"
-                  }`}>
+                  <div
+                    className={`w-full h-full rounded-lg border-2 p-2 text-xs overflow-hidden ${
+                      task.isOnCriticalPath
+                        ? "border-orange-500 bg-orange-100 dark:bg-orange-900"
+                        : task.done
+                          ? "border-green-500 bg-green-100 dark:bg-green-900"
+                          : "border-blue-500 bg-blue-100 dark:bg-blue-900"
+                    }`}
+                  >
                     <div className="font-semibold truncate">{task.title}</div>
-                    <div className="text-gray-600 dark:text-gray-300">
-                      {task.duration}d
-                    </div>
+                    <div className="text-gray-600 dark:text-gray-300">{task.duration}d</div>
                   </div>
                 </div>
               );
@@ -263,4 +267,4 @@ export default function VerticalTimeline({
       )}
     </div>
   );
-} 
+}

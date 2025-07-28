@@ -14,7 +14,7 @@ export function useTimelineLayout(tasks: TimelineTask[], zoom: number): UseTimel
       const today = new Date();
       const start = addDays(today, -TIMELINE_CONFIG.AUTO_SCROLL_OFFSET);
       const end = addDays(today, TIMELINE_CONFIG.AUTO_SCROLL_OFFSET);
-      
+
       const rows: DateRow[] = [];
       let current = new Date(start);
 
@@ -68,4 +68,4 @@ export function useTimelineLayout(tasks: TimelineTask[], zoom: number): UseTimel
     taskNodeWidth,
     taskNodeHeight,
   };
-} 
+}

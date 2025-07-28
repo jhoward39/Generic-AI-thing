@@ -7,8 +7,6 @@ import TaskModal from "../components/TaskModal";
 import { Todo } from "../../types";
 import { CONFIG } from "../../lib/config";
 
-
-
 export default function TaskListPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [sortKey, setSortKey] = useState<
@@ -51,8 +49,6 @@ export default function TaskListPage() {
       console.error("Failed to fetch todos:", error);
     }
   }, []);
-
-
 
   // Initial load
   useEffect(() => {

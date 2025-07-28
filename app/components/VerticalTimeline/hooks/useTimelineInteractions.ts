@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import { TimelineTask } from "../../../../types";
-import { 
-  UseTimelineInteractionsParams, 
+import {
+  UseTimelineInteractionsParams,
   UseTimelineInteractionsReturn,
-  TaskCoordinates 
+  TaskCoordinates,
 } from "../types";
 
 /**
@@ -11,15 +11,9 @@ import {
  * Handles drag and drop, keyboard events, and dependency creation
  */
 export function useTimelineInteractions(
-  params: UseTimelineInteractionsParams
+  params: UseTimelineInteractionsParams,
 ): UseTimelineInteractionsReturn {
-  const {
-    onCreateDependency,
-    onTaskMove,
-    containerRef,
-    rowHeight,
-    dateRows,
-  } = params;
+  const { onCreateDependency, onTaskMove, containerRef, rowHeight, dateRows } = params;
 
   // State
   const [draggedTask, setDraggedTask] = useState<number | null>(null);
@@ -84,7 +78,7 @@ export function useTimelineInteractions(
         }
       }
     },
-    [connectingFrom, onCreateDependency]
+    [connectingFrom, onCreateDependency],
   );
 
   const handleTaskMouseMove = useCallback(
@@ -94,7 +88,7 @@ export function useTimelineInteractions(
         setDraggedTaskPos({ x: e.clientX, y: e.clientY });
       }
     },
-    [draggedTask]
+    [draggedTask],
   );
 
   const handleTaskMouseUp = useCallback(() => {
@@ -132,4 +126,4 @@ export function useTimelineInteractions(
     handleKeyUp,
     handleWindowBlur,
   };
-} 
+}

@@ -35,4 +35,4 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   return <ThemeContext.Provider value={{ isDark, toggle }}>{children}</ThemeContext.Provider>;
-} 
+}

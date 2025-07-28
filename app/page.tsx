@@ -9,7 +9,7 @@ import { CONFIG } from "../lib/config";
 
 function HomeContent() {
   const { state, actions, derived } = useTimeline();
-  
+
   // Add-task form state
   const [newTitle, setNewTitle] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
@@ -30,14 +30,10 @@ function HomeContent() {
 
   const handleAddTask = async () => {
     if (!newTitle.trim()) return;
-    
+
     try {
-      await actions.createTodo(
-        newTitle,
-        newDueDate || null,
-        parseInt(newDuration) || 1
-      );
-      
+      await actions.createTodo(newTitle, newDueDate || null, parseInt(newDuration) || 1);
+
       // Reset form
       setNewTitle("");
       setNewDueDate("");
@@ -51,28 +47,28 @@ function HomeContent() {
     <div className="min-h-screen bg-[#FFFFF8] dark:bg-gray-900 relative transition-colors duration-200">
       {/* Loading indicator */}
       {state.loading && (
-        <div className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[${CONFIG.Z_INDEX.FLOATING_UI}]`}>
-          <div className="bg-blue-500 text-white px-4 py-2 rounded-md">
-            Loading...
-          </div>
+        <div
+          className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[${CONFIG.Z_INDEX.FLOATING_UI}]`}
+        >
+          <div className="bg-blue-500 text-white px-4 py-2 rounded-md">Loading...</div>
         </div>
       )}
 
       {/* Error indicator */}
       {state.error && (
-        <div className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[${CONFIG.Z_INDEX.FLOATING_UI}]`}>
-          <div className="bg-red-500 text-white px-4 py-2 rounded-md">
-            {state.error}
-          </div>
+        <div
+          className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[${CONFIG.Z_INDEX.FLOATING_UI}]`}
+        >
+          <div className="bg-red-500 text-white px-4 py-2 rounded-md">{state.error}</div>
         </div>
       )}
 
       {/* Project overview pie chart */}
       {state.dependencyInfo && (
         <div className={`absolute top-4 right-4 z-[${CONFIG.Z_INDEX.NORMAL_TASK}]`}>
-          <TaskPieChart 
-            uncompletedTasks={derived.uncompletedTasks} 
-            overdueTasks={derived.overdueTasks} 
+          <TaskPieChart
+            uncompletedTasks={derived.uncompletedTasks}
+            overdueTasks={derived.overdueTasks}
           />
         </div>
       )}
@@ -88,7 +84,9 @@ function HomeContent() {
       />
 
       {/* Add task bar */}
-      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] dark:bg-gray-900 px-4 py-3 flex gap-2 items-center z-[${CONFIG.Z_INDEX.NORMAL_TASK}] transition-colors duration-200`}>
+      <div
+        className={`fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#FFFFF8] dark:bg-gray-900 px-4 py-3 flex gap-2 items-center z-[${CONFIG.Z_INDEX.NORMAL_TASK}] transition-colors duration-200`}
+      >
         <input
           type="text"
           placeholder="add a task..."

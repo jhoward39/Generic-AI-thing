@@ -1,11 +1,11 @@
 import { useCallback } from "react";
 import { TimelineTask } from "../../../../types";
 import { TIMELINE_CONFIG, TIMELINE_STYLES } from "../utils/constants";
-import { 
-  UseTimelineDependenciesParams, 
+import {
+  UseTimelineDependenciesParams,
   UseTimelineDependenciesReturn,
   TaskCoordinates,
-  EdgePoint 
+  EdgePoint,
 } from "../types";
 
 /**
@@ -13,7 +13,7 @@ import {
  * Handles coordinate calculations and edge point determination
  */
 export function useTimelineDependencies(
-  params: UseTimelineDependenciesParams
+  params: UseTimelineDependenciesParams,
 ): UseTimelineDependenciesReturn {
   const { dateRows, rowHeight, containerWidth, taskNodeWidth, taskNodeHeight } = params;
 
@@ -47,14 +47,20 @@ export function useTimelineDependencies(
 
       return { x: absoluteX, y: absoluteY };
     },
-    [dateRows, rowHeight, containerWidth]
+    [dateRows, rowHeight, containerWidth],
   );
 
   /**
    * Calculate clean edge connection points with proper direction vectors
    */
   const getBoxEdgePointWithDirection = useCallback(
-    (centerX: number, centerY: number, targetX: number, targetY: number, isSource: boolean): EdgePoint => {
+    (
+      centerX: number,
+      centerY: number,
+      targetX: number,
+      targetY: number,
+      isSource: boolean,
+    ): EdgePoint => {
       const halfWidth = taskNodeWidth / 2;
       const halfHeight = taskNodeHeight / 2;
       const arrowLength = TIMELINE_STYLES.ARROW_LENGTH;
@@ -129,11 +135,11 @@ export function useTimelineDependencies(
         }
       }
     },
-    [taskNodeWidth, taskNodeHeight]
+    [taskNodeWidth, taskNodeHeight],
   );
 
   return {
     getTaskCoordinates,
     getBoxEdgePointWithDirection,
   };
-} 
+}

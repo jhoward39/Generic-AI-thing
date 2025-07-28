@@ -5,8 +5,6 @@ import { useTheme } from "../contexts/ThemeContext";
 import TaskModal from "./TaskModal";
 import { TimelineTask, VerticalTimelineProps } from "../../types";
 
-
-
 /* ------------------------------------------------------------------
  * Constants
  * ------------------------------------------------------------------*/

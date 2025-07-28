@@ -95,7 +95,10 @@ export interface VerticalTimelineProps {
   tasks: TimelineTask[];
   dependencies: TimelineDependency[];
   onTaskMove: (taskId: number, newDate: string) => void;
-  onCreateDependency: (fromId: number, toId: number) => Promise<{ success: boolean; error?: string }>;
+  onCreateDependency: (
+    fromId: number,
+    toId: number,
+  ) => Promise<{ success: boolean; error?: string }>;
   onTaskUpdate: () => void;
   onTaskDelete: (id: number) => void;
 }
@@ -191,4 +194,4 @@ export interface DeleteDependencyRequest {
 
 export type SortKey = "title" | "dueDate" | "duration" | "earliestStartDate";
 export type SortOrder = "asc" | "desc";
-export type ViewMode = "month" | "week"; 
+export type ViewMode = "month" | "week";

@@ -30,11 +30,11 @@ export default function TimelineHeader({ zoom, onZoomChange }: TimelineHeaderPro
       >
         −
       </button>
-      
+
       <span className="text-sm font-mono min-w-[4rem] text-center text-gray-700 dark:text-gray-300">
         {Math.round(zoom * 100)}%
       </span>
-      
+
       <button
         onClick={handleZoomIn}
         disabled={zoom >= TIMELINE_CONFIG.MAX_ZOOM}
@@ -43,7 +43,7 @@ export default function TimelineHeader({ zoom, onZoomChange }: TimelineHeaderPro
       >
         +
       </button>
-      
+
       <button
         onClick={handleZoomReset}
         className="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 rounded transition-colors"
@@ -53,4 +53,4 @@ export default function TimelineHeader({ zoom, onZoomChange }: TimelineHeaderPro
       </button>
     </div>
   );
-} 
+}

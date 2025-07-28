@@ -44,7 +44,10 @@ export interface UseTimelineLayoutReturn {
 
 export interface UseTimelineInteractionsParams {
   tasks: TimelineTask[];
-  onCreateDependency: (fromId: number, toId: number) => Promise<{ success: boolean; error?: string }>;
+  onCreateDependency: (
+    fromId: number,
+    toId: number,
+  ) => Promise<{ success: boolean; error?: string }>;
   onTaskMove: (taskId: number, newDate: string) => void;
   taskRefs: React.MutableRefObject<Map<number, HTMLDivElement>>;
   containerRef: React.RefObject<HTMLDivElement>;
@@ -83,7 +86,7 @@ export interface UseTimelineDependenciesReturn {
     centerY: number,
     targetX: number,
     targetY: number,
-    isSource: boolean
+    isSource: boolean,
   ) => EdgePoint;
 }
 
@@ -122,7 +125,7 @@ export interface DependencyLinesProps {
     centerY: number,
     targetX: number,
     targetY: number,
-    isSource: boolean
+    isSource: boolean,
   ) => EdgePoint;
   isDark: boolean;
 }
@@ -142,4 +145,4 @@ export interface TaskNodesProps {
   onTaskMouseUp: (e: React.MouseEvent) => void;
   onTaskClick: (task: TimelineTask) => void;
   isDark: boolean;
-} 
+}

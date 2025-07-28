@@ -9,8 +9,6 @@ import "react-calendar/dist/Calendar.css";
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
 
-
-
 export default function CustomCalendar({
   value,
   onChange,

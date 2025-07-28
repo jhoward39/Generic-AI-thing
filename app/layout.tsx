@@ -19,8 +19,6 @@ const etBook = localFont({
   weight: "400",
 });
 
-
-
 export default function RootLayout({
   children,
 }: Readonly<{

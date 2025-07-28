@@ -4,8 +4,6 @@ import Image from "next/image";
 import CustomCalendar from "./CustomCalendar";
 import { TaskModalProps } from "../../types";
 
-
-
 export default function TaskModal({
   task,
   isOpen,
