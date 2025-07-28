@@ -12,7 +12,6 @@ import TimelineGrid from "./components/TimelineGrid";
 import { CONFIG } from "../../../lib/config";
 
 /**
- * Professional timeline component broken down into focused sub-components
  * Handles task visualization, drag & drop, and dependency management
  */
 export default function VerticalTimeline({
