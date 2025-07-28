@@ -104,6 +104,16 @@ export default function TaskListPage() {
     return () => clearInterval(id);
   }, [hasPendingImages, fetchTodos]);
 
+  // Update selectedTodoForModal when todos change (to reflect image loading)
+  useEffect(() => {
+    if (selectedTodoForModal) {
+      const updatedTodo = todos.find(todo => todo.id === selectedTodoForModal.id);
+      if (updatedTodo) {
+        setSelectedTodoForModal(updatedTodo);
+      }
+    }
+  }, [todos, selectedTodoForModal?.id]);
+
   // Handle column header clicks for sorting
   const handleSort = (key: "title" | "dueDate" | "duration" | "earliestStartDate") => {
     if (sortKey === key) {
@@ -435,11 +445,13 @@ export default function TaskListPage() {
                     : "bg-[#FFFFF8] dark:bg-gray-900"
                 }`}
               >
-                {/* Small Icon */}
-                <div className="col-span-1">
-                  {todo.imageUrl === undefined && (
-                    <div className="w-6 h-6 rounded border border-black dark:border-black bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                  )}
+                                  {/* Small Icon */}
+                  <div className="col-span-1">
+                    {todo.imageUrl === undefined && (
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent border-r-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
                   {todo.imageUrl === null && (
                     <div className="w-6 h-6 rounded border border-black dark:border-black bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                       <span className="text-xs text-gray-400">?</span>

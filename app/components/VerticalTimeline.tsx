@@ -107,6 +107,16 @@ export default function VerticalTimeline({
   const taskRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const hasScrolledToToday = useRef(false);
 
+  // Update selectedTask when tasks change (to reflect image loading)
+  useEffect(() => {
+    if (selectedTask) {
+      const updatedTask = tasks.find(task => task.id === selectedTask.id);
+      if (updatedTask) {
+        setSelectedTask(updatedTask);
+      }
+    }
+  }, [tasks, selectedTask?.id]);
+
   /* ----------------------- Date Range Calculation ----------------------- */
   const { startDate, endDate, dateRows } = useMemo(() => {
     if (tasks.length === 0) {
@@ -843,14 +853,22 @@ export default function VerticalTimeline({
             maxWidth: "100%",
           }}
         >
-          {dateRows.map((row, index) => (
-            <div
-              key={row.dateStr}
-              className={`border-b border-gray-200 dark:border-gray-700 relative flex items-center transition-colors duration-200 ${
-                draggedTask !== null && dropTargetRowIndex === index
-                  ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600"
-                  : ""
-              }`}
+          {dateRows.map((row, index) => {
+            const today = formatDate(new Date());
+            const isToday = row.dateStr === today;
+            
+            return (
+              <div
+                key={row.dateStr}
+                className={`relative flex items-center transition-colors duration-200 ${
+                  isToday
+                    ? "border-t-2 border-b-2 border-t-blue-600 border-b-blue-600 dark:border-t-blue-400 dark:border-b-blue-400"
+                    : "border-b border-gray-200 dark:border-gray-700"
+                } ${
+                  draggedTask !== null && dropTargetRowIndex === index
+                    ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600"
+                    : ""
+                }`}
               style={{
                 height: rowHeight,
                 marginLeft: MINIMAP_WIDTH,
@@ -859,7 +877,11 @@ export default function VerticalTimeline({
               }}
             >
               {/* Date label */}
-              <div className="absolute left-4 top-2 text-sm text-gray-600 dark:text-gray-400 font-medium transition-colors duration-200">
+              <div className={`absolute left-4 top-2 text-sm font-medium transition-colors duration-200 ${
+                isToday 
+                  ? "text-blue-900 dark:text-blue-900" 
+                  : "text-gray-600 dark:text-gray-400"
+              }`}>
                 {row.date.toLocaleDateString("en-US", {
                   weekday: "short",
                   month: "short",
@@ -914,7 +936,8 @@ export default function VerticalTimeline({
                 </div>
               ))}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

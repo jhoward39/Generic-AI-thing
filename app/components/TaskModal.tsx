@@ -219,8 +219,8 @@ export default function TaskModal({
           {/* Image */}
           <div className="md:col-span-1">
             {task.imageUrl === undefined && (
-              <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center animate-pulse">
-                Loading...
+              <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-gray-400 border-t-transparent border-r-transparent rounded-full animate-spin"></div>
               </div>
             )}
             {task.imageUrl === null && (

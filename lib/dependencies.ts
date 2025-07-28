@@ -32,8 +32,8 @@ export async function buildDependencyGraph(): Promise<DependencyGraph> {
 
   // Build nodes
   for (const todo of todos) {
-    const dependencies = todo.dependencies.map((dep: any) => dep.dependsOnId);
-    const dependentTasks = todo.dependentTasks.map((dep: any) => dep.taskId);
+    const dependencies = todo.dependencies.map((dep: { dependsOnId: number }) => dep.dependsOnId);
+    const dependentTasks = todo.dependentTasks.map((dep: { taskId: number }) => dep.taskId);
 
     nodes.set(todo.id, {
       id: todo.id,
@@ -117,7 +117,7 @@ export function topologicalSort(graph: DependencyGraph): number[] {
   }
 
   // Calculate in-degrees
-  for (const [nodeId, dependencies] of Array.from(graph.adjacencyList.entries())) {
+  for (const [, dependencies] of Array.from(graph.adjacencyList.entries())) {
     for (const depId of dependencies) {
       inDegree.set(depId, (inDegree.get(depId) || 0) + 1);
     }
@@ -163,7 +163,6 @@ export function calculateCriticalPath(graph: DependencyGraph): {
 
   // Forward pass - calculate earliest start times
   for (const nodeId of sortedNodes) {
-    const node = graph.nodes.get(nodeId)!;
     let earliestStart = 0;
 
     const dependencies = graph.adjacencyList.get(nodeId) || [];
@@ -234,7 +233,7 @@ export async function updateTaskScheduling(): Promise<void> {
   const { criticalPath, earliestTimes } = calculateCriticalPath(graph);
 
   // Update all tasks with calculated values
-  for (const [taskId, node] of Array.from(graph.nodes.entries())) {
+  for (const [taskId] of Array.from(graph.nodes.entries())) {
     const earliestStart = earliestTimes.get(taskId) || 0;
     const isOnCriticalPath = criticalPath.includes(taskId);
 

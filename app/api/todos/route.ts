@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
-    const todoData: any = {
+    const todoData = {
       title: title.trim(),
       duration: parseInt(duration) || 1,
       // Always set a due date - use provided date or default to 5 business days from now
@@ -86,11 +86,13 @@ export async function POST(request: Request) {
       const img = await fetchImageUrl(todo.title);
       if (img) {
         try {
-          await (prisma as any).todo.update({
+          await prisma.todo.update({
             where: { id: todo.id },
             data: { imageUrl: img },
           });
-        } catch (_) {}
+        } catch {
+          // Ignore image update errors
+        }
       }
     })();
 
@@ -98,8 +100,8 @@ export async function POST(request: Request) {
     await updateTaskScheduling();
 
     // Return the todo but intentionally omit imageUrl so the client knows the image is still loading
-    const { imageUrl: _ignore, ...rest } = todo as any;
-    return NextResponse.json(rest, { status: 201 });
+    const { imageUrl: _imageUrl, ...todoResponse } = todo;
+    return NextResponse.json(todoResponse, { status: 201 });
   } catch (error) {
     console.error("Error creating todo:", error);
     return NextResponse.json({ error: "Error creating todo" }, { status: 500 });

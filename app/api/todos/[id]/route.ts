@@ -16,7 +16,12 @@ export async function PATCH(request: Request, { params }: Params) {
 
   try {
     const body = await request.json();
-    const updateData: any = {};
+    const updateData: {
+      dueDate?: Date | null;
+      done?: boolean;
+      title?: string;
+      duration?: number;
+    } = {};
 
     // Handle different fields that can be updated
     if ("dueDate" in body) {
@@ -41,7 +46,7 @@ export async function PATCH(request: Request, { params }: Params) {
     await updateTaskScheduling();
 
     return NextResponse.json(updatedTodo, { status: 200 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Error updating todo" }, { status: 500 });
   }
 }
@@ -66,7 +71,7 @@ export async function DELETE(request: Request, { params }: Params) {
     await updateTaskScheduling();
 
     return NextResponse.json({ message: "Todo deleted" }, { status: 200 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Error deleting todo" }, { status: 500 });
   }
 }

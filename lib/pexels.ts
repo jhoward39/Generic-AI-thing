@@ -16,7 +16,7 @@ export async function fetchImageUrl(query: string): Promise<string | null> {
       },
       // 2s timeout guard in edge/serverless context
       next: { revalidate: 0 },
-    } as any);
+    });
 
     if (!res.ok) return null;
 

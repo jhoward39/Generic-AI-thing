@@ -30,17 +30,6 @@ body {
   .btn-primary {
     @apply bg-gray-300 border border-gray-300 text-gray-600 rounded-lg hover:bg-green-900 hover:text-white active:bg-green-900 transition-all duration-300 ease-in-out;
   }
-  .skeleton-img {
-    @apply rounded-md bg-gray-200 relative overflow-hidden;
-    background-image: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0) 45%,
-      rgba(255, 255, 255, 0.6) 50%,
-      rgba(255, 255, 255, 0) 55%
-    );
-    background-size: 400% 400%;
-    animation: skeleton-shimmer 2.4s infinite linear;
-  }
 }
 
 @keyframes skeleton-shimmer {
