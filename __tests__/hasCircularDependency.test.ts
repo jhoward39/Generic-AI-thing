@@ -1,11 +1,14 @@
-import { hasCircularDependency, type DependencyGraph, type TaskNode } from '@/lib/dependencies';
-import { describe, it, expect } from '@jest/globals';
+import { hasCircularDependency, type DependencyGraph, type TaskNode } from "@/lib/dependencies";
+import { describe, it, expect } from "@jest/globals";
 
 /**
  * Helper to build an in-memory graph quickly.
  * edges: array of [from, to] meaning `from` depends on `to` (i.e. edge direction matches DB model)
  */
-function makeGraph(edges: Array<[number, number]>, durations: Record<number, number> = {}): DependencyGraph {
+function makeGraph(
+  edges: Array<[number, number]>,
+  durations: Record<number, number> = {},
+): DependencyGraph {
   const nodes = new Map<number, TaskNode>();
   const adjacency = new Map<number, number[]>();
 
@@ -50,8 +53,8 @@ function makeGraph(edges: Array<[number, number]>, durations: Record<number, num
   };
 }
 
-describe('hasCircularDependency', () => {
-  it('returns false when adding a safe dependency', () => {
+describe("hasCircularDependency", () => {
+  it("returns false when adding a safe dependency", () => {
     const graph = makeGraph([
       [1, 2],
       [2, 3],
@@ -61,7 +64,7 @@ describe('hasCircularDependency', () => {
     expect(hasCircularDependency(graph, 3, 4)).toBe(false);
   });
 
-  it('detects a circular dependency when the new edge closes a cycle', () => {
+  it("detects a circular dependency when the new edge closes a cycle", () => {
     const graph = makeGraph([
       [1, 2],
       [2, 3],
@@ -70,4 +73,4 @@ describe('hasCircularDependency', () => {
     // Adding 3 -> 1 would create a cycle 1 -> 2 -> 3 -> 1
     expect(hasCircularDependency(graph, 3, 1)).toBe(true);
   });
-}); 
+});

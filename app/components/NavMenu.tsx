@@ -29,15 +29,11 @@ export default function NavMenu() {
           <Link href="/" onClick={() => setOpen(false)} className="text-black font-normal">
             Home
           </Link>
-          <Link
-            href="/task-list"
-            onClick={() => setOpen(false)}
-            className="text-black font-normal"
-          >
+          <Link href="/task-list" onClick={() => setOpen(false)} className="text-black font-normal">
             Task List
           </Link>
         </div>
       </div>
     </>
   );
-} 
+}

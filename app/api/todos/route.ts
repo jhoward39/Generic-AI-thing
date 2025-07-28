@@ -82,14 +82,14 @@ export async function POST(request: Request) {
 
     // Fire-and-forget image fetch: do not block response
     (async () => {
-      const { fetchImageUrl } = await import('@/lib/pexels');
+      const { fetchImageUrl } = await import("@/lib/pexels");
       const img = await fetchImageUrl(todo.title);
       if (img) {
         try {
-            await (prisma as any).todo.update({
-              where: { id: todo.id },
-              data: { imageUrl: img },
-            });
+          await (prisma as any).todo.update({
+            where: { id: todo.id },
+            data: { imageUrl: img },
+          });
         } catch (_) {}
       }
     })();

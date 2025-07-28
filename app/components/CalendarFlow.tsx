@@ -1,12 +1,7 @@
 "use client";
 
 import React, { useMemo, useCallback, useEffect } from "react";
-import ReactFlow, {
-  addEdge,
-  Position,
-  useNodesState,
-  useEdgesState,
-} from "reactflow";
+import ReactFlow, { addEdge, Position, useNodesState, useEdgesState } from "reactflow";
 import "reactflow/dist/style.css";
 
 /* ------------------------------------------------------------------
@@ -58,11 +53,14 @@ export default function CalendarFlow({
 }: CalendarFlowProps) {
   /* ----------------------- Derived calendar meta ----------------------- */
   const monthStart = useMemo(
-    () => (viewMode === "month" ? new Date(viewStart.getFullYear(), viewStart.getMonth(), 1) : null),
+    () =>
+      viewMode === "month" ? new Date(viewStart.getFullYear(), viewStart.getMonth(), 1) : null,
     [viewMode, viewStart],
   );
   const firstWeekday = monthStart ? monthStart.getDay() : 0;
-  const daysInMonth = monthStart ? new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate() : 7;
+  const daysInMonth = monthStart
+    ? new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
+    : 7;
   const numRows = viewMode === "week" ? 1 : Math.ceil((firstWeekday + daysInMonth) / 7);
   const viewEnd = useMemo(() => {
     return viewMode === "week"
@@ -89,10 +87,7 @@ export default function CalendarFlow({
       if (date < viewStart || date > viewEnd) return; // outside visible window
 
       const col = date.getDay();
-      const row =
-        viewMode === "week"
-          ? 0
-          : Math.floor((firstWeekday + date.getDate() - 1) / 7);
+      const row = viewMode === "week" ? 0 : Math.floor((firstWeekday + date.getDate() - 1) / 7);
 
       const stackIdx = addStackedPos(row, col);
 
@@ -235,4 +230,4 @@ export default function CalendarFlow({
       </div>
     </div>
   );
-} 
+}

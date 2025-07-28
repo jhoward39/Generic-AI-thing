@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useTheme } from '../layout';
-import TaskModal from './TaskModal';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useTheme } from "../layout";
+import TaskModal from "./TaskModal";
 
 interface Task {
   id: number;
@@ -37,7 +37,10 @@ interface VerticalTimelineProps {
   tasks: Task[];
   dependencies: Dependency[];
   onTaskMove: (taskId: number, newDate: string) => void;
-  onCreateDependency: (fromId: number, toId: number) => Promise<{ success: boolean; error?: string }>;
+  onCreateDependency: (
+    fromId: number,
+    toId: number,
+  ) => Promise<{ success: boolean; error?: string }>;
   onTaskUpdate: () => void;
   onTaskDelete: (id: number) => void;
 }
@@ -115,20 +118,20 @@ export default function VerticalTimeline({
       };
     }
 
-    const dates = tasks.map(t => parseDate(t.dueDate));
-    const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-    
+    const dates = tasks.map((t) => parseDate(t.dueDate));
+    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+
     // Add padding
     const start = addDays(minDate, -7);
     const end = addDays(maxDate, 7);
-    
+
     const rows: Array<{ date: Date; dateStr: string; tasks: Task[] }> = [];
     let current = new Date(start);
-    
+
     while (current <= end) {
       const dateStr = formatDate(current);
-      const dayTasks = tasks.filter(t => t.dueDate === dateStr);
+      const dayTasks = tasks.filter((t) => t.dueDate === dateStr);
       rows.push({
         date: new Date(current),
         dateStr,
@@ -151,139 +154,163 @@ export default function VerticalTimeline({
   const taskNodeHeight = TASK_NODE_HEIGHT * zoom;
 
   // Unified coordinate calculation - same logic for both HTML positioning and SVG paths
-  const getTaskCoordinates = useCallback((task: Task) => {
-    const row = dateRows.find(row => row.tasks.some(t => t.id === task.id));
-    if (!row) return null;
-    
-    const rowIndex = dateRows.indexOf(row);
-    const taskIndex = row.tasks.findIndex(t => t.id === task.id);
-    
-    // Use tracked container width for consistent calculations
-    const availableWidth = containerWidth - MINIMAP_WIDTH - 32;
-    
-    // Calculate task X position within the row
-    let taskX: number;
-    if (row.tasks.length === 1) {
-      taskX = availableWidth / 2;
-    } else {
-      const spacing = availableWidth / (row.tasks.length + 1);
-      taskX = spacing * (taskIndex + 1);
-    }
-    
-    // Calculate absolute coordinates - ensuring perfect alignment
-    const absoluteX = MINIMAP_WIDTH + taskX;
-    // Use the exact same Y calculation as the HTML positioning: row center
-    const absoluteY = rowIndex * rowHeight + (rowHeight / 2);
-    
-    return { x: absoluteX, y: absoluteY };
-  }, [dateRows, rowHeight, containerWidth, MINIMAP_WIDTH]);
+  const getTaskCoordinates = useCallback(
+    (task: Task) => {
+      const row = dateRows.find((row) => row.tasks.some((t) => t.id === task.id));
+      if (!row) return null;
+
+      const rowIndex = dateRows.indexOf(row);
+      const taskIndex = row.tasks.findIndex((t) => t.id === task.id);
+
+      // Use tracked container width for consistent calculations
+      const availableWidth = containerWidth - MINIMAP_WIDTH - 32;
+
+      // Calculate task X position within the row
+      let taskX: number;
+      if (row.tasks.length === 1) {
+        taskX = availableWidth / 2;
+      } else {
+        const spacing = availableWidth / (row.tasks.length + 1);
+        taskX = spacing * (taskIndex + 1);
+      }
+
+      // Calculate absolute coordinates - ensuring perfect alignment
+      const absoluteX = MINIMAP_WIDTH + taskX;
+      // Use the exact same Y calculation as the HTML positioning: row center
+      const absoluteY = rowIndex * rowHeight + rowHeight / 2;
+
+      return { x: absoluteX, y: absoluteY };
+    },
+    [dateRows, rowHeight, containerWidth, MINIMAP_WIDTH],
+  );
 
   // Calculate clean edge connection points with proper top/bottom logic and perpendicular direction vectors
-  const getBoxEdgePointWithDirection = useCallback((centerX: number, centerY: number, targetX: number, targetY: number, isSource: boolean) => {
-    const halfWidth = (TASK_NODE_WIDTH * zoom) / 2;
-    const halfHeight = (TASK_NODE_HEIGHT * zoom) / 2;
-    const arrowLength = 9; // Length of arrow head for proper offset
-    
-    // Calculate direction to target
-    const dx = targetX - centerX;
-    const dy = targetY - centerY;
-    
-    // Determine which edge to connect to based on direction and role (source vs target)
-    // Prioritize vertical connections when there's any significant vertical separation
-    if (Math.abs(dy) > 10) { // If vertically separated by more than 10 pixels, use vertical connection
-      // Tasks are vertically separated - use top/bottom edges
-      if (isSource) {
-        // For source task: if target is below, connect from bottom edge
-        if (dy > 0) {
-          return { 
-            point: { x: centerX, y: centerY + halfHeight }, 
-            direction: { x: 0, y: 1 } // Outward from bottom edge (down)
-          };
+  const getBoxEdgePointWithDirection = useCallback(
+    (centerX: number, centerY: number, targetX: number, targetY: number, isSource: boolean) => {
+      const halfWidth = (TASK_NODE_WIDTH * zoom) / 2;
+      const halfHeight = (TASK_NODE_HEIGHT * zoom) / 2;
+      const arrowLength = 9; // Length of arrow head for proper offset
+
+      // Calculate direction to target
+      const dx = targetX - centerX;
+      const dy = targetY - centerY;
+
+      // Determine which edge to connect to based on direction and role (source vs target)
+      // Prioritize vertical connections when there's any significant vertical separation
+      if (Math.abs(dy) > 10) {
+        // If vertically separated by more than 10 pixels, use vertical connection
+        // Tasks are vertically separated - use top/bottom edges
+        if (isSource) {
+          // For source task: if target is below, connect from bottom edge
+          if (dy > 0) {
+            return {
+              point: { x: centerX, y: centerY + halfHeight },
+              direction: { x: 0, y: 1 }, // Outward from bottom edge (down)
+            };
+          } else {
+            return {
+              point: { x: centerX, y: centerY - halfHeight },
+              direction: { x: 0, y: -1 }, // Outward from top edge (up)
+            };
+          }
         } else {
-          return { 
-            point: { x: centerX, y: centerY - halfHeight }, 
-            direction: { x: 0, y: -1 } // Outward from top edge (up)
-          };
+          // For target task: offset by arrow length so line stops before box
+          if (dy < 0) {
+            // Source is above target - connect to top edge, offset outward by arrow length
+            return {
+              point: { x: centerX, y: centerY - halfHeight - arrowLength },
+              direction: { x: 0, y: -1 }, // Inward to top edge (up)
+            };
+          } else {
+            // Source is below target - connect to bottom edge, offset outward by arrow length
+            return {
+              point: { x: centerX, y: centerY + halfHeight + arrowLength },
+              direction: { x: 0, y: 1 }, // Inward to bottom edge (down)
+            };
+          }
         }
       } else {
-        // For target task: offset by arrow length so line stops before box
-        if (dy < 0) {
-          // Source is above target - connect to top edge, offset outward by arrow length
-          return { 
-            point: { x: centerX, y: centerY - halfHeight - arrowLength }, 
-            direction: { x: 0, y: -1 } // Inward to top edge (up)
-          };
+        // Tasks are horizontally separated - use left/right edges
+        if (isSource) {
+          // For source task: connect from the edge facing the target
+          if (dx > 0) {
+            return {
+              point: { x: centerX + halfWidth, y: centerY },
+              direction: { x: 1, y: 0 }, // Outward from right edge (right)
+            };
+          } else {
+            return {
+              point: { x: centerX - halfWidth, y: centerY },
+              direction: { x: -1, y: 0 }, // Outward from left edge (left)
+            };
+          }
         } else {
-          // Source is below target - connect to bottom edge, offset outward by arrow length
-          return { 
-            point: { x: centerX, y: centerY + halfHeight + arrowLength }, 
-            direction: { x: 0, y: 1 } // Inward to bottom edge (down)
-          };
+          // For target task: offset by arrow length so line stops before box
+          if (dx < 0) {
+            // Source is to the left of target - connect to left edge, offset outward by arrow length
+            return {
+              point: { x: centerX - halfWidth - arrowLength, y: centerY },
+              direction: { x: -1, y: 0 }, // Inward to left edge (left)
+            };
+          } else {
+            // Source is to the right of target - connect to right edge, offset outward by arrow length
+            return {
+              point: { x: centerX + halfWidth + arrowLength, y: centerY },
+              direction: { x: 1, y: 0 }, // Inward to right edge (right)
+            };
+          }
         }
       }
-    } else {
-      // Tasks are horizontally separated - use left/right edges
-      if (isSource) {
-        // For source task: connect from the edge facing the target
-        if (dx > 0) {
-          return { 
-            point: { x: centerX + halfWidth, y: centerY }, 
-            direction: { x: 1, y: 0 } // Outward from right edge (right)
-          };
-        } else {
-          return { 
-            point: { x: centerX - halfWidth, y: centerY }, 
-            direction: { x: -1, y: 0 } // Outward from left edge (left)
-          };
-        }
-      } else {
-        // For target task: offset by arrow length so line stops before box
-        if (dx < 0) {
-          // Source is to the left of target - connect to left edge, offset outward by arrow length
-          return { 
-            point: { x: centerX - halfWidth - arrowLength, y: centerY }, 
-            direction: { x: -1, y: 0 } // Inward to left edge (left)
-          };
-        } else {
-          // Source is to the right of target - connect to right edge, offset outward by arrow length
-          return { 
-            point: { x: centerX + halfWidth + arrowLength, y: centerY }, 
-            direction: { x: 1, y: 0 } // Inward to right edge (right)
-          };
-        }
-      }
-    }
-  }, [zoom]);
+    },
+    [zoom],
+  );
 
   // Calculate dependency paths for SVG rendering
   const dependencyPaths = useMemo(() => {
-    return dependencies.map((dep, index) => {
-      const fromTask = tasks.find(t => t.id === dep.fromId);
-      const toTask = tasks.find(t => t.id === dep.toId);
-      
-      if (!fromTask || !toTask) return null;
+    return dependencies
+      .map((dep, index) => {
+        const fromTask = tasks.find((t) => t.id === dep.fromId);
+        const toTask = tasks.find((t) => t.id === dep.toId);
 
-      // Get center positions
-      const fromCenter = getTaskCoordinates(fromTask);
-      const toCenter = getTaskCoordinates(toTask);
-      
-      if (!fromCenter || !toCenter) return null;
+        if (!fromTask || !toTask) return null;
 
-      // Calculate edge intersection points with direction info
-      const fromEdgeInfo = getBoxEdgePointWithDirection(fromCenter.x, fromCenter.y, toCenter.x, toCenter.y, true);
-      const toEdgeInfo = getBoxEdgePointWithDirection(toCenter.x, toCenter.y, fromCenter.x, fromCenter.y, false);
+        // Get center positions
+        const fromCenter = getTaskCoordinates(fromTask);
+        const toCenter = getTaskCoordinates(toTask);
 
-      // Control points for perpendicular approach
-      const controlDistance = Math.max(50 * zoom, Math.abs(toEdgeInfo.point.x - fromEdgeInfo.point.x) * 0.3, Math.abs(toEdgeInfo.point.y - fromEdgeInfo.point.y) * 0.3);
-      
-      const curve1X = fromEdgeInfo.point.x + fromEdgeInfo.direction.x * controlDistance;
-      const curve1Y = fromEdgeInfo.point.y + fromEdgeInfo.direction.y * controlDistance;
-      const curve2X = toEdgeInfo.point.x + toEdgeInfo.direction.x * controlDistance;
-      const curve2Y = toEdgeInfo.point.y + toEdgeInfo.direction.y * controlDistance;
-      
-      const path = `M ${fromEdgeInfo.point.x} ${fromEdgeInfo.point.y} C ${curve1X} ${curve1Y} ${curve2X} ${curve2Y} ${toEdgeInfo.point.x} ${toEdgeInfo.point.y}`;
-      
-              return {
+        if (!fromCenter || !toCenter) return null;
+
+        // Calculate edge intersection points with direction info
+        const fromEdgeInfo = getBoxEdgePointWithDirection(
+          fromCenter.x,
+          fromCenter.y,
+          toCenter.x,
+          toCenter.y,
+          true,
+        );
+        const toEdgeInfo = getBoxEdgePointWithDirection(
+          toCenter.x,
+          toCenter.y,
+          fromCenter.x,
+          fromCenter.y,
+          false,
+        );
+
+        // Control points for perpendicular approach
+        const controlDistance = Math.max(
+          50 * zoom,
+          Math.abs(toEdgeInfo.point.x - fromEdgeInfo.point.x) * 0.3,
+          Math.abs(toEdgeInfo.point.y - fromEdgeInfo.point.y) * 0.3,
+        );
+
+        const curve1X = fromEdgeInfo.point.x + fromEdgeInfo.direction.x * controlDistance;
+        const curve1Y = fromEdgeInfo.point.y + fromEdgeInfo.direction.y * controlDistance;
+        const curve2X = toEdgeInfo.point.x + toEdgeInfo.direction.x * controlDistance;
+        const curve2Y = toEdgeInfo.point.y + toEdgeInfo.direction.y * controlDistance;
+
+        const path = `M ${fromEdgeInfo.point.x} ${fromEdgeInfo.point.y} C ${curve1X} ${curve1Y} ${curve2X} ${curve2Y} ${toEdgeInfo.point.x} ${toEdgeInfo.point.y}`;
+
+        return {
           id: `dep-${index}`,
           path,
           fromTask,
@@ -291,22 +318,23 @@ export default function VerticalTimeline({
           fromX: fromEdgeInfo.point.x,
           fromY: fromEdgeInfo.point.y,
           toX: toEdgeInfo.point.x,
-          toY: toEdgeInfo.point.y
+          toY: toEdgeInfo.point.y,
         };
-    }).filter((item): item is NonNullable<typeof item> => item !== null);
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
   }, [dependencies, tasks, getTaskCoordinates, getBoxEdgePointWithDirection, forceUpdate, zoom]);
 
   // Force dependency path updates when tasks or dependencies change
   useEffect(() => {
-    setForceUpdate(prev => prev + 1);
+    setForceUpdate((prev) => prev + 1);
   }, [tasks, dependencies]);
 
   // Smooth updates using requestAnimationFrame for DOM changes
   useEffect(() => {
     const update = () => {
-      setForceUpdate(prev => prev + 1);
+      setForceUpdate((prev) => prev + 1);
     };
-    
+
     const rafId = requestAnimationFrame(update);
     return () => cancelAnimationFrame(rafId);
   }, [tasks]);
@@ -315,12 +343,12 @@ export default function VerticalTimeline({
   useEffect(() => {
     if (containerRef.current && dateRows.length > 0 && !hasScrolledToToday.current) {
       const today = new Date();
-      const todayIndex = dateRows.findIndex(row => 
-        row.date.toDateString() === today.toDateString()
+      const todayIndex = dateRows.findIndex(
+        (row) => row.date.toDateString() === today.toDateString(),
       );
-      
+
       if (todayIndex >= 0) {
-        const scrollTop = todayIndex * rowHeight - (containerRef.current.clientHeight / 2);
+        const scrollTop = todayIndex * rowHeight - containerRef.current.clientHeight / 2;
         containerRef.current.scrollTop = Math.max(0, scrollTop);
         setScrollTop(containerRef.current.scrollTop);
         hasScrolledToToday.current = true;
@@ -329,48 +357,51 @@ export default function VerticalTimeline({
   }, [dateRows, rowHeight]);
 
   /* ----------------------- Zoom Handlers ----------------------- */
-  const handleWheel = useCallback((e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      
-      const container = containerRef.current;
-      if (!container) return;
-      
-      // Get cursor position relative to the container
-      const rect = container.getBoundingClientRect();
-      const cursorY = e.clientY - rect.top;
-      
-      // Calculate what row the cursor is over (independent of zoom)
-      const scrollTop = container.scrollTop;
-      const oldRowHeight = BASE_ROW_HEIGHT * zoom;
-      const cursorRowIndex = (scrollTop + cursorY) / oldRowHeight;
-      
-      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-      const oldZoom = zoom;
-      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, oldZoom + delta));
-      
-      // Only update if zoom actually changes
-      if (newZoom !== oldZoom) {
-        setZoom(newZoom);
-        
-        // Calculate new scroll position to keep the same row under cursor
-        // We need to do this after the zoom state updates, so we'll use setTimeout
-        setTimeout(() => {
-          if (containerRef.current) {
-            const newRowHeight = BASE_ROW_HEIGHT * newZoom;
-            const newScrollTop = (cursorRowIndex * newRowHeight) - cursorY;
-            containerRef.current.scrollTop = Math.max(0, newScrollTop);
-          }
-        }, 0);
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Get cursor position relative to the container
+        const rect = container.getBoundingClientRect();
+        const cursorY = e.clientY - rect.top;
+
+        // Calculate what row the cursor is over (independent of zoom)
+        const scrollTop = container.scrollTop;
+        const oldRowHeight = BASE_ROW_HEIGHT * zoom;
+        const cursorRowIndex = (scrollTop + cursorY) / oldRowHeight;
+
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        const oldZoom = zoom;
+        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, oldZoom + delta));
+
+        // Only update if zoom actually changes
+        if (newZoom !== oldZoom) {
+          setZoom(newZoom);
+
+          // Calculate new scroll position to keep the same row under cursor
+          // We need to do this after the zoom state updates, so we'll use setTimeout
+          setTimeout(() => {
+            if (containerRef.current) {
+              const newRowHeight = BASE_ROW_HEIGHT * newZoom;
+              const newScrollTop = cursorRowIndex * newRowHeight - cursorY;
+              containerRef.current.scrollTop = Math.max(0, newScrollTop);
+            }
+          }, 0);
+        }
       }
-    }
-  }, [zoom]);
+    },
+    [zoom],
+  );
 
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
       setScrollTop(containerRef.current.scrollTop);
       // Force dependency paths to recalculate on scroll
-      setForceUpdate(prev => prev + 1);
+      setForceUpdate((prev) => prev + 1);
     }
   }, []);
 
@@ -379,13 +410,13 @@ export default function VerticalTimeline({
     const container = containerRef.current;
     if (!container) return;
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    
-    container.addEventListener('scroll', handleScroll);
-    
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    container.addEventListener("scroll", handleScroll);
+
     return () => {
-      container.removeEventListener('wheel', handleWheel);
-      container.removeEventListener('scroll', handleScroll);
+      container.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("scroll", handleScroll);
     };
   }, [handleWheel, handleScroll]);
 
@@ -407,60 +438,68 @@ export default function VerticalTimeline({
       setIsCommandHeld(false);
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleWindowBlur);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleWindowBlur);
     };
   }, []);
 
   /* ----------------------- Drag Handlers ----------------------- */
-  const handleTaskMouseDown = useCallback((e: React.MouseEvent, task: Task) => {
-    if (e.button === 0) { // Left click
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Check for Command/Ctrl + click to open modal
-      if (e.metaKey || e.ctrlKey) {
-        setSelectedTask(task);
-        setShowTaskModal(true);
-        return; // Don't start drag when opening modal
-      }
-      
-      // Otherwise start drag
-      setDraggedTask(task.id);
-      setDraggedTaskPos({ x: e.clientX, y: e.clientY });
-    } else if (e.button === 2) { // Right click for dependency
-      e.preventDefault();
-      console.log('Right click on task:', task.id, 'connectingFrom:', connectingFrom);
-      if (connectingFrom === null) {
-        setConnectingFrom(task.id);
-        setDependencyError(null); // Clear any previous error
-        console.log('Started connecting from task:', task.id);
-      } else if (connectingFrom !== task.id) {
-        console.log('Creating dependency from', connectingFrom, 'to', task.id);
-        onCreateDependency(connectingFrom, task.id).then(result => {
-          if (result.success) {
-            setConnectingFrom(null);
-            setDependencyError(null);
-          } else {
-            setDependencyError(result.error || 'Failed to create dependency.');
-          }
-        });
-      }
-    }
-  }, [connectingFrom, onCreateDependency]);
+  const handleTaskMouseDown = useCallback(
+    (e: React.MouseEvent, task: Task) => {
+      if (e.button === 0) {
+        // Left click
+        e.preventDefault();
+        e.stopPropagation();
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (draggedTask !== null) {
-      // Use viewport coordinates for consistent tracking
-      setDraggedTaskPos({ x: e.clientX, y: e.clientY });
-    }
-  }, [draggedTask]);
+        // Check for Command/Ctrl + click to open modal
+        if (e.metaKey || e.ctrlKey) {
+          setSelectedTask(task);
+          setShowTaskModal(true);
+          return; // Don't start drag when opening modal
+        }
+
+        // Otherwise start drag
+        setDraggedTask(task.id);
+        setDraggedTaskPos({ x: e.clientX, y: e.clientY });
+      } else if (e.button === 2) {
+        // Right click for dependency
+        e.preventDefault();
+        console.log("Right click on task:", task.id, "connectingFrom:", connectingFrom);
+        if (connectingFrom === null) {
+          setConnectingFrom(task.id);
+          setDependencyError(null); // Clear any previous error
+          console.log("Started connecting from task:", task.id);
+        } else if (connectingFrom !== task.id) {
+          console.log("Creating dependency from", connectingFrom, "to", task.id);
+          onCreateDependency(connectingFrom, task.id).then((result) => {
+            if (result.success) {
+              setConnectingFrom(null);
+              setDependencyError(null);
+            } else {
+              setDependencyError(result.error || "Failed to create dependency.");
+            }
+          });
+        }
+      }
+    },
+    [connectingFrom, onCreateDependency],
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (draggedTask !== null) {
+        // Use viewport coordinates for consistent tracking
+        setDraggedTaskPos({ x: e.clientX, y: e.clientY });
+      }
+    },
+    [draggedTask],
+  );
 
   const handleMouseUp = useCallback(() => {
     if (draggedTask !== null && containerRef.current && draggedTaskPos) {
@@ -468,18 +507,18 @@ export default function VerticalTimeline({
       const rect = containerRef.current.getBoundingClientRect();
       const containerY = draggedTaskPos.y - rect.top;
       const scrollTop = containerRef.current.scrollTop;
-      
+
       // Use the center of the dragged task for more accurate drop detection
       const taskCenterY = containerY + scrollTop;
       const dropRowIndex = Math.floor(taskCenterY / rowHeight);
       const clampedRowIndex = Math.max(0, Math.min(dateRows.length - 1, dropRowIndex));
-      
+
       const targetDate = dateRows[clampedRowIndex]?.dateStr;
       if (targetDate) {
         onTaskMove(draggedTask, targetDate);
         // Trigger immediate dependency path update after task move
         requestAnimationFrame(() => {
-          setForceUpdate(prev => prev + 1);
+          setForceUpdate((prev) => prev + 1);
         });
       }
     }
@@ -489,17 +528,20 @@ export default function VerticalTimeline({
   }, [draggedTask, draggedTaskPos, rowHeight, dateRows, onTaskMove]);
 
   // Handle clicking outside tasks to cancel dependency creation
-  const handleTimelineClick = useCallback((e: React.MouseEvent) => {
-    // Only cancel dependency creation if we're in connecting mode and didn't click on a task
-    if (connectingFrom !== null) {
-      const target = e.target as HTMLElement;
-      const isTaskElement = target.closest('[data-task-id]');
-      if (!isTaskElement) {
-        setConnectingFrom(null);
-        setDependencyError(null); // Clear error when canceling
+  const handleTimelineClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Only cancel dependency creation if we're in connecting mode and didn't click on a task
+      if (connectingFrom !== null) {
+        const target = e.target as HTMLElement;
+        const isTaskElement = target.closest("[data-task-id]");
+        if (!isTaskElement) {
+          setConnectingFrom(null);
+          setDependencyError(null); // Clear error when canceling
+        }
       }
-    }
-  }, [connectingFrom]);
+    },
+    [connectingFrom],
+  );
 
   // Prevent context menu on timeline
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -508,32 +550,33 @@ export default function VerticalTimeline({
 
   /* ----------------------- Minimap Calculation ----------------------- */
   const minimapViewport = useMemo(() => {
-    if (!containerRef.current || !minimapRef.current || totalHeight === 0) return { top: 0, height: 0 };
-    
+    if (!containerRef.current || !minimapRef.current || totalHeight === 0)
+      return { top: 0, height: 0 };
+
     const container = containerRef.current;
     const minimap = minimapRef.current;
     const viewportHeight = container.clientHeight;
     const minimapHeight = minimap.clientHeight;
-    
+
     // Simple calculation: what portion of timeline is visible
     const viewportRatio = viewportHeight / totalHeight;
-    
+
     // How much can we actually scroll
     const maxScroll = Math.max(0, totalHeight - viewportHeight);
-    
+
     // Available minimap space (10px padding top and bottom)
     const availableSpace = minimapHeight - 20;
-    
+
     // Indicator height proportional to what we can see
     const indicatorHeight = Math.max(4, viewportRatio * availableSpace);
-    
+
     // Available travel distance for the indicator
     const indicatorTravelSpace = availableSpace - indicatorHeight;
-    
+
     // Position based on scroll ratio, but only within available travel space
     const scrollRatio = maxScroll > 0 ? scrollTop / maxScroll : 0;
-    const indicatorTop = 10 + (scrollRatio * indicatorTravelSpace);
-    
+    const indicatorTop = 10 + scrollRatio * indicatorTravelSpace;
+
     return {
       top: indicatorTop,
       height: indicatorHeight,
@@ -543,13 +586,13 @@ export default function VerticalTimeline({
   /* ----------------------- Task Dots for Minimap ----------------------- */
   const taskDots = useMemo(() => {
     if (!containerRef.current || !minimapRef.current || totalHeight === 0) return [];
-    
+
     // Use actual minimap height for dot positioning
     const minimap = minimapRef.current;
     const minimapHeight = minimap.clientHeight;
     const availableHeight = minimapHeight - 20; // Same padding as viewport
     const dots: Array<{ top: number; count: number }> = [];
-    
+
     dateRows.forEach((row, index) => {
       if (row.tasks.length > 0) {
         const rowPosition = (index * rowHeight) / totalHeight;
@@ -557,16 +600,37 @@ export default function VerticalTimeline({
         dots.push({ top: dotTop, count: row.tasks.length });
       }
     });
-    
+
     return dots;
   }, [dateRows, rowHeight, totalHeight]);
 
   /* ----------------------- Minimap Handlers ----------------------- */
-  const handleMinimapMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setMinimapDragging(true);
-    
-    if (containerRef.current && minimapRef.current) {
+  const handleMinimapMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setMinimapDragging(true);
+
+      if (containerRef.current && minimapRef.current) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const viewportHeight = containerRef.current.clientHeight;
+        const minimapHeight = minimapRef.current.clientHeight;
+        const availableHeight = minimapHeight - 20;
+        const scrollRatio = Math.max(0, Math.min(1, (y - 10) / availableHeight));
+        const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
+        const newScrollTop = scrollRatio * maxScrollTop;
+
+        containerRef.current.scrollTop = Math.max(0, newScrollTop);
+        setScrollTop(containerRef.current.scrollTop);
+      }
+    },
+    [totalHeight],
+  );
+
+  const handleMinimapMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!minimapDragging || !containerRef.current || !minimapRef.current) return;
+
       const rect = e.currentTarget.getBoundingClientRect();
       const y = e.clientY - rect.top;
       const viewportHeight = containerRef.current.clientHeight;
@@ -575,27 +639,12 @@ export default function VerticalTimeline({
       const scrollRatio = Math.max(0, Math.min(1, (y - 10) / availableHeight));
       const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
       const newScrollTop = scrollRatio * maxScrollTop;
-      
+
       containerRef.current.scrollTop = Math.max(0, newScrollTop);
       setScrollTop(containerRef.current.scrollTop);
-    }
-  }, [totalHeight]);
-
-  const handleMinimapMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!minimapDragging || !containerRef.current || !minimapRef.current) return;
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const viewportHeight = containerRef.current.clientHeight;
-    const minimapHeight = minimapRef.current.clientHeight;
-    const availableHeight = minimapHeight - 20;
-    const scrollRatio = Math.max(0, Math.min(1, (y - 10) / availableHeight));
-    const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
-    const newScrollTop = scrollRatio * maxScrollTop;
-    
-    containerRef.current.scrollTop = Math.max(0, newScrollTop);
-    setScrollTop(containerRef.current.scrollTop);
-  }, [minimapDragging, totalHeight]);
+    },
+    [minimapDragging, totalHeight],
+  );
 
   const handleMinimapMouseUp = useCallback(() => {
     setMinimapDragging(false);
@@ -605,8 +654,8 @@ export default function VerticalTimeline({
   useEffect(() => {
     if (minimapDragging) {
       const handleGlobalMouseUp = () => setMinimapDragging(false);
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-      return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener("mouseup", handleGlobalMouseUp);
+      return () => document.removeEventListener("mouseup", handleGlobalMouseUp);
     }
   }, [minimapDragging]);
 
@@ -618,8 +667,8 @@ export default function VerticalTimeline({
         setContainerWidth(containerRef.current.clientWidth);
       }
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Track initial container width
@@ -633,7 +682,7 @@ export default function VerticalTimeline({
   useEffect(() => {
     if (containerRef.current) {
       setContainerWidth(containerRef.current.clientWidth);
-      setForceUpdate(prev => prev + 1);
+      setForceUpdate((prev) => prev + 1);
     }
   }, [tasks, dependencies]);
 
@@ -650,7 +699,7 @@ export default function VerticalTimeline({
   // Calculate which row would be the drop target
   const dropTargetRowIndex = useMemo(() => {
     if (draggedTask === null || !draggedTaskPos || !containerRef.current) return -1;
-    
+
     // Convert viewport coordinates to container coordinates (same as drop logic)
     const rect = containerRef.current.getBoundingClientRect();
     const containerY = draggedTaskPos.y - rect.top;
@@ -664,7 +713,7 @@ export default function VerticalTimeline({
   return (
     <div className="flex h-[calc(100vh-80px)] bg-[#FFFFF8] dark:bg-gray-900 transition-colors duration-200">
       {/* Minimap */}
-      <div 
+      <div
         ref={minimapRef}
         className="relative bg-[#FFFFF8] dark:bg-gray-900 cursor-pointer transition-colors duration-200 h-full"
         style={{ width: MINIMAP_WIDTH }}
@@ -673,12 +722,15 @@ export default function VerticalTimeline({
         onMouseUp={handleMinimapMouseUp}
       >
         {/* Black timeline line */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 bg-black" style={{ 
-          width: 2, 
-          top: 10, 
-          bottom: 10 
-        }}></div>
-        
+        <div
+          className="absolute left-1/2 transform -translate-x-1/2 bg-black"
+          style={{
+            width: 2,
+            top: 10,
+            bottom: 10,
+          }}
+        ></div>
+
         {/* Task dots */}
         {taskDots.map((dot, index) => (
           <div
@@ -689,21 +741,24 @@ export default function VerticalTimeline({
               height: Math.min(12, 6 + Math.floor(dot.count * 1.5)),
               top: dot.top - Math.min(6, 3 + Math.floor(dot.count * 0.75)),
             }}
-            title={`${dot.count} task${dot.count > 1 ? 's' : ''}`}
+            title={`${dot.count} task${dot.count > 1 ? "s" : ""}`}
           />
         ))}
-        
+
         {/* Current viewport indicator */}
-        <div className="absolute left-0 right-0 bg-gray-300 border border-gray-400 rounded-sm opacity-80" style={{
-          top: minimapViewport.top,
-          height: minimapViewport.height,
-        }}>
+        <div
+          className="absolute left-0 right-0 bg-gray-300 border border-gray-400 rounded-sm opacity-80"
+          style={{
+            top: minimapViewport.top,
+            height: minimapViewport.height,
+          }}
+        >
           <div className="w-full h-full bg-gray-200"></div>
         </div>
       </div>
 
       {/* Main timeline */}
-      <div 
+      <div
         className="relative h-full overflow-y-auto overflow-x-hidden"
         style={{ width: `calc(100vw - ${MINIMAP_WIDTH}px)` }}
         ref={containerRef}
@@ -714,13 +769,13 @@ export default function VerticalTimeline({
         onContextMenu={handleContextMenu}
       >
         {/* React Flow for dependency arrows */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none z-10"
-          style={{ 
+          style={{
             left: 0,
             top: 0,
-            width: '100%',
-            height: totalHeight
+            width: "100%",
+            height: totalHeight,
           }}
         >
           <svg
@@ -732,29 +787,29 @@ export default function VerticalTimeline({
             {/* Arrow marker definitions */}
             <defs>
               {/* Normal dependency arrow */}
-              <marker 
-                id="arrow-marker" 
-                viewBox="0 0 10 10" 
-                refX="3" 
-                refY="3" 
-                markerWidth="6" 
-                markerHeight="6" 
+              <marker
+                id="arrow-marker"
+                viewBox="0 0 10 10"
+                refX="3"
+                refY="3"
+                markerWidth="6"
+                markerHeight="6"
                 orient="auto"
               >
-                <path d="M0,0 L0,6 L9,3 z" fill={isDark ? '#9CA3AF' : '#6B7280'}/>
+                <path d="M0,0 L0,6 L9,3 z" fill={isDark ? "#9CA3AF" : "#6B7280"} />
               </marker>
-              
+
               {/* Critical path arrow */}
-              <marker 
-                id="critical-arrow-marker" 
-                viewBox="0 0 10 10" 
-                refX="3" 
-                refY="3" 
-                markerWidth="6" 
-                markerHeight="6" 
+              <marker
+                id="critical-arrow-marker"
+                viewBox="0 0 10 10"
+                refX="3"
+                refY="3"
+                markerWidth="6"
+                markerHeight="6"
                 orient="auto"
               >
-                <path d="M0,0 L0,6 L9,3 z" fill="#D97706"/>
+                <path d="M0,0 L0,6 L9,3 z" fill="#D97706" />
               </marker>
             </defs>
 
@@ -762,15 +817,17 @@ export default function VerticalTimeline({
             {dependencyPaths.map((dep, index) => {
               // Check if both tasks are on critical path
               const isCriticalPath = dep!.fromTask.isOnCriticalPath && dep!.toTask.isOnCriticalPath;
-              
+
               return (
                 <g key={dep!.id}>
                   <path
                     d={dep!.path}
-                    stroke={isCriticalPath ? '#D97706' : (isDark ? '#9CA3AF' : '#6B7280')}
+                    stroke={isCriticalPath ? "#D97706" : isDark ? "#9CA3AF" : "#6B7280"}
                     strokeWidth={isCriticalPath ? "3" : "2"}
                     fill="none"
-                    markerEnd={isCriticalPath ? "url(#critical-arrow-marker)" : "url(#arrow-marker)"}
+                    markerEnd={
+                      isCriticalPath ? "url(#critical-arrow-marker)" : "url(#arrow-marker)"
+                    }
                   />
                 </g>
               );
@@ -779,32 +836,34 @@ export default function VerticalTimeline({
         </div>
 
         {/* Date rows */}
-        <div style={{ 
-          height: totalHeight, 
-          width: '100%',
-          maxWidth: '100%'
-        }}>
+        <div
+          style={{
+            height: totalHeight,
+            width: "100%",
+            maxWidth: "100%",
+          }}
+        >
           {dateRows.map((row, index) => (
             <div
               key={row.dateStr}
               className={`border-b border-gray-200 dark:border-gray-700 relative flex items-center transition-colors duration-200 ${
                 draggedTask !== null && dropTargetRowIndex === index
-                  ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600" 
+                  ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600"
                   : ""
               }`}
-              style={{ 
+              style={{
                 height: rowHeight,
                 marginLeft: MINIMAP_WIDTH,
-                marginRight: '32px',
-                width: `calc(100% - ${MINIMAP_WIDTH}px - 32px)`
+                marginRight: "32px",
+                width: `calc(100% - ${MINIMAP_WIDTH}px - 32px)`,
               }}
             >
               {/* Date label */}
               <div className="absolute left-4 top-2 text-sm text-gray-600 dark:text-gray-400 font-medium transition-colors duration-200">
-                {row.date.toLocaleDateString("en-US", { 
-                  weekday: "short", 
-                  month: "short", 
-                  day: "numeric" 
+                {row.date.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
                 })}
               </div>
 
@@ -819,30 +878,39 @@ export default function VerticalTimeline({
                   data-task-id={task.id}
                   className={`absolute bg-blue-100 dark:bg-blue-800 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 select-none text-xs transition-colors duration-200 flex items-center justify-center ${
                     isCommandHeld ? "cursor-pointer" : "cursor-move"
-                  } ${draggedTask === task.id ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500" : ""
+                  } ${
+                    draggedTask === task.id
+                      ? "opacity-80 shadow-lg bg-blue-200 dark:bg-blue-700 border-blue-400 dark:border-blue-500"
+                      : ""
                   } ${connectingFrom === task.id ? "ring-2 ring-orange-400" : ""}`}
                   style={{
-                    left: draggedTask === task.id && draggedTaskPos ? 
-                      draggedTaskPos.x - (taskNodeWidth * 0.9) / 2 : 
-                      getTaskCoordinates(task)!.x - MINIMAP_WIDTH - (taskNodeWidth / 2),
-                    top: draggedTask === task.id && draggedTaskPos ? 
-                      draggedTaskPos.y - (taskNodeHeight * 0.9) / 2 : 
-                      (rowHeight - taskNodeHeight) / 2,
+                    left:
+                      draggedTask === task.id && draggedTaskPos
+                        ? draggedTaskPos.x - (taskNodeWidth * 0.9) / 2
+                        : getTaskCoordinates(task)!.x - MINIMAP_WIDTH - taskNodeWidth / 2,
+                    top:
+                      draggedTask === task.id && draggedTaskPos
+                        ? draggedTaskPos.y - (taskNodeHeight * 0.9) / 2
+                        : (rowHeight - taskNodeHeight) / 2,
                     width: draggedTask === task.id ? taskNodeWidth * 0.9 : taskNodeWidth,
                     height: draggedTask === task.id ? taskNodeHeight * 0.9 : taskNodeHeight,
                     zIndex: draggedTask === task.id ? 1000 : 1,
-                    pointerEvents: draggedTask === task.id ? 'none' : 'auto',
-                    transform: 'none',
-                    transition: draggedTask === task.id ? 'none' : 'all 0.2s ease',
-                    position: draggedTask === task.id ? 'fixed' : 'absolute',
+                    pointerEvents: draggedTask === task.id ? "none" : "auto",
+                    transform: "none",
+                    transition: draggedTask === task.id ? "none" : "all 0.2s ease",
+                    position: draggedTask === task.id ? "fixed" : "absolute",
                   }}
                   onMouseDown={(e) => handleTaskMouseDown(e, task)}
                 >
-                  <div className={`font-medium text-center leading-tight truncate ${
-                    task.done 
-                      ? 'line-through text-gray-500 dark:text-gray-500'
-                      : 'text-gray-900 dark:text-gray-100'
-                  }`}>{task.title}</div>
+                  <div
+                    className={`font-medium text-center leading-tight truncate ${
+                      task.done
+                        ? "line-through text-gray-500 dark:text-gray-500"
+                        : "text-gray-900 dark:text-gray-100"
+                    }`}
+                  >
+                    {task.title}
+                  </div>
                 </div>
               ))}
             </div>
@@ -877,4 +945,4 @@ export default function VerticalTimeline({
       )}
     </div>
   );
-} 
+}

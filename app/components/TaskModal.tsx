@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import CustomCalendar from './CustomCalendar';
+import React, { useState, useEffect } from "react";
+import CustomCalendar from "./CustomCalendar";
 
 interface Task {
   id: number;
@@ -35,11 +35,20 @@ interface TaskModalProps {
   onDependencyUpdate?: () => void;
 }
 
-export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskDelete, onDependencyUpdate }: TaskModalProps) {
+export default function TaskModal({
+  task,
+  isOpen,
+  onClose,
+  onTaskUpdate,
+  onTaskDelete,
+  onDependencyUpdate,
+}: TaskModalProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [localDone, setLocalDone] = useState(false);
-  const [localDependencies, setLocalDependencies] = useState<{ dependsOn: { id: number; title: string; } }[]>([]);
+  const [localDependencies, setLocalDependencies] = useState<
+    { dependsOn: { id: number; title: string } }[]
+  >([]);
 
   // Update local state when task prop changes
   useEffect(() => {
@@ -52,17 +61,17 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
   // Close modal when clicking outside
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
+      document.addEventListener("keydown", handleEscape);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen, onClose]);
 
@@ -84,14 +93,14 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
   const handleSaveEdit = async (taskId: number, field: string, value: string) => {
     setEditingField(null);
     setEditValue("");
-    
+
     try {
       const response = await fetch(`/api/todos/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: field === 'duration' ? parseInt(value) : value }),
+        body: JSON.stringify({ [field]: field === "duration" ? parseInt(value) : value }),
       });
-      
+
       if (response.ok) {
         onTaskUpdate();
       }
@@ -102,17 +111,17 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
 
   const handleToggleDone = async (id: number, currentDone: boolean) => {
     const newDone = !currentDone;
-    
+
     // Update local state immediately for instant UI feedback
     setLocalDone(newDone);
-    
+
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: newDone }),
       });
-      
+
       if (response.ok) {
         onTaskUpdate();
       } else {
@@ -128,15 +137,15 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
 
   const handleDeleteDependency = async (taskId: number, dependsOnId: number) => {
     // Update local state immediately for UI feedback
-    setLocalDependencies(prev => prev.filter(dep => dep.dependsOn.id !== dependsOnId));
-    
+    setLocalDependencies((prev) => prev.filter((dep) => dep.dependsOn.id !== dependsOnId));
+
     try {
       const response = await fetch("/api/todos/dependencies", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, dependsOnId }),
       });
-      
+
       if (response.ok) {
         onTaskUpdate();
         onDependencyUpdate?.();
@@ -159,33 +168,33 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
   if (!isOpen || !task) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-[#FFFFF8] dark:bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto border border-black dark:border-white"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          {editingField === 'title' ? (
+          {editingField === "title" ? (
             <input
               type="text"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              onBlur={() => handleSaveEdit(task.id, 'title', editValue)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit(task.id, 'title', editValue)}
+              onBlur={() => handleSaveEdit(task.id, "title", editValue)}
+              onKeyPress={(e) => e.key === "Enter" && handleSaveEdit(task.id, "title", editValue)}
               className="text-2xl font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-gray-100 flex-1 mr-4"
               autoFocus
             />
           ) : (
-            <h2 
+            <h2
               className={`text-2xl font-semibold cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded transition-colors flex-1 ${
-                localDone 
-                  ? "line-through text-gray-500 dark:text-gray-500" 
+                localDone
+                  ? "line-through text-gray-500 dark:text-gray-500"
                   : "text-gray-900 dark:text-gray-100"
               }`}
-              onDoubleClick={() => startEditing('title', task.title)}
+              onDoubleClick={() => startEditing("title", task.title)}
               title="Double-click to edit"
             >
               {task.title}
@@ -196,7 +205,12 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -221,16 +235,20 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
                 className="w-full h-48 object-cover rounded-lg border border-black dark:border-white"
               />
             )}
-            
+
             {/* Editing hint moved here */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 italic text-center">💡 Double-click any field to edit</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 italic text-center">
+              💡 Double-click any field to edit
+            </p>
           </div>
 
           {/* Details */}
           <div className="md:col-span-2 space-y-4">
             {/* Done Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Status
+              </label>
               <div className="flex items-center gap-2">
                 <label className="flex items-center cursor-pointer">
                   <input
@@ -241,14 +259,20 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
                     }}
                     className="sr-only"
                   />
-                  <div className={`w-5 h-5 border-2 rounded transition-colors duration-200 flex items-center justify-center ${
-                    localDone 
-                      ? 'bg-green-900 border-green-900' 
-                      : 'border-gray-300 dark:border-gray-600 hover:border-green-900'
-                  }`}>
+                  <div
+                    className={`w-5 h-5 border-2 rounded transition-colors duration-200 flex items-center justify-center ${
+                      localDone
+                        ? "bg-green-900 border-green-900"
+                        : "border-gray-300 dark:border-gray-600 hover:border-green-900"
+                    }`}
+                  >
                     {localDone && (
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     )}
                   </div>
@@ -261,14 +285,16 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
 
             {/* Due Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date</label>
-              {editingField === 'dueDate' ? (
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Due Date
+              </label>
+              {editingField === "dueDate" ? (
                 <div className="w-full">
                   <CustomCalendar
                     value={editValue}
                     onChange={(dateString) => {
                       setEditValue(dateString);
-                      handleSaveEdit(task.id, 'dueDate', dateString);
+                      handleSaveEdit(task.id, "dueDate", dateString);
                     }}
                     className="w-full p-3"
                     placeholder="Select due date"
@@ -277,32 +303,38 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
                 </div>
               ) : (
                 <div
-                  onDoubleClick={() => startEditing('dueDate', task.dueDate ? task.dueDate.split('T')[0] : '')}
+                  onDoubleClick={() =>
+                    startEditing("dueDate", task.dueDate ? task.dueDate.split("T")[0] : "")
+                  }
                   className="w-full p-3 bg-[#FFFFF8] dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   title="Double-click to edit"
                 >
-                  {task.dueDate ? formatDate(task.dueDate) : 'No due date set'}
+                  {task.dueDate ? formatDate(task.dueDate) : "No due date set"}
                 </div>
               )}
             </div>
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duration</label>
-              {editingField === 'duration' ? (
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Duration
+              </label>
+              {editingField === "duration" ? (
                 <input
                   type="number"
                   min="1"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  onBlur={() => handleSaveEdit(task.id, 'duration', editValue)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit(task.id, 'duration', editValue)}
+                  onBlur={() => handleSaveEdit(task.id, "duration", editValue)}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && handleSaveEdit(task.id, "duration", editValue)
+                  }
                   className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   autoFocus
                 />
               ) : (
                 <div
-                  onDoubleClick={() => startEditing('duration', task.duration.toString())}
+                  onDoubleClick={() => startEditing("duration", task.duration.toString())}
                   className="w-full p-3 bg-[#FFFFF8] dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   title="Double-click to edit"
                 >
@@ -313,15 +345,19 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
 
             {/* Earliest Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Earliest Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Earliest Start Date
+              </label>
               <div className="w-full p-3 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400">
-                {task.earliestStartDate ? formatDate(task.earliestStartDate) : 'N/A'}
+                {task.earliestStartDate ? formatDate(task.earliestStartDate) : "N/A"}
               </div>
             </div>
 
             {/* Created Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Created Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Created Date
+              </label>
               <div className="w-full p-3 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400">
                 {formatDate(task.createdAt)}
               </div>
@@ -349,7 +385,9 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
             {/* Dependencies */}
             {localDependencies.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dependencies</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Dependencies
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {localDependencies.map((dep) => (
                     <div
@@ -362,8 +400,18 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
                         className="hover:bg-red-500 hover:text-white rounded-full p-0.5 transition-colors"
                         title="Remove dependency"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -375,7 +423,9 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
             {/* Dependent Tasks */}
             {task.dependentTasks.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Blocks These Tasks</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Blocks These Tasks
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {task.dependentTasks.map((dep, index) => (
                     <span
@@ -412,4 +462,4 @@ export default function TaskModal({ task, isOpen, onClose, onTaskUpdate, onTaskD
       </div>
     </div>
   );
-} 
+}

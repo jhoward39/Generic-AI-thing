@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
 import localFont from "next/font/local";
 import "./globals.css";
 import Header from "./components/Header";
@@ -34,26 +34,22 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for saved theme preference or default to light mode
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const shouldBeDark = savedTheme === "dark" || (!savedTheme && prefersDark);
+
     setIsDark(shouldBeDark);
-    document.documentElement.classList.toggle('dark', shouldBeDark);
+    document.documentElement.classList.toggle("dark", shouldBeDark);
   }, []);
 
   const toggle = () => {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
-    localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
-    document.documentElement.classList.toggle('dark', newIsDark);
+    localStorage.setItem("theme", newIsDark ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", newIsDark);
   };
 
-  return (
-    <ThemeContext.Provider value={{ isDark, toggle }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ isDark, toggle }}>{children}</ThemeContext.Provider>;
 }
 
 export default function RootLayout({

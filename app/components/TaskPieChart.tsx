@@ -7,8 +7,8 @@ interface TaskPieChartProps {
 }
 
 export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPieChartProps) {
-  const [hoveredSection, setHoveredSection] = useState<'overdue' | 'remaining' | null>(null);
-  
+  const [hoveredSection, setHoveredSection] = useState<"overdue" | "remaining" | null>(null);
+
   // remainingTasks = uncompleted tasks that are NOT overdue
   const remainingTasks = uncompletedTasks - overdueTasks;
   const overduePercentage = uncompletedTasks > 0 ? (overdueTasks / uncompletedTasks) * 100 : 0;
@@ -20,26 +20,26 @@ export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPie
   const circumference = 2 * Math.PI * radius;
   const overdueStrokeDasharray = `${(overduePercentage / 100) * circumference} ${circumference}`;
   const remainingStrokeDasharray = `${(remainingPercentage / 100) * circumference} ${circumference}`;
-  
+
   // Calculate rotation for remaining section (starts after overdue section)
   const remainingRotation = (overduePercentage / 100) * 360;
 
   const getCenterText = () => {
-    if (hoveredSection === 'overdue') {
+    if (hoveredSection === "overdue") {
       return overdueTasks.toString();
-    } else if (hoveredSection === 'remaining') {
+    } else if (hoveredSection === "remaining") {
       return remainingTasks.toString();
     }
     return uncompletedTasks.toString();
   };
 
   const getCenterSubtext = () => {
-    if (hoveredSection === 'overdue') {
-      return 'overdue';
-    } else if (hoveredSection === 'remaining') {
-      return 'on track';
+    if (hoveredSection === "overdue") {
+      return "overdue";
+    } else if (hoveredSection === "remaining") {
+      return "on track";
     }
-    return 'todo';
+    return "todo";
   };
 
   return (
@@ -55,7 +55,7 @@ export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPie
           strokeWidth={strokeWidth}
           className="dark:stroke-gray-600"
         />
-        
+
         {/* Invisible hover areas for better responsiveness */}
         {overdueTasks > 0 && (
           <circle
@@ -66,13 +66,13 @@ export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPie
             stroke="transparent"
             strokeWidth={strokeWidth + 8}
             strokeDasharray={overdueStrokeDasharray}
-            style={{ pointerEvents: 'all' }}
+            style={{ pointerEvents: "all" }}
             className="cursor-pointer"
-            onMouseEnter={() => setHoveredSection('overdue')}
+            onMouseEnter={() => setHoveredSection("overdue")}
             onMouseLeave={() => setHoveredSection(null)}
           />
         )}
-        
+
         {remainingTasks > 0 && (
           <circle
             cx="56"
@@ -84,15 +84,15 @@ export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPie
             strokeDasharray={remainingStrokeDasharray}
             style={{
               transform: `rotate(${remainingRotation}deg)`,
-              transformOrigin: '56px 56px',
-              pointerEvents: 'all'
+              transformOrigin: "56px 56px",
+              pointerEvents: "all",
             }}
             className="cursor-pointer"
-            onMouseEnter={() => setHoveredSection('remaining')}
+            onMouseEnter={() => setHoveredSection("remaining")}
             onMouseLeave={() => setHoveredSection(null)}
           />
         )}
-        
+
         {/* Visible pie sections */}
         {/* Overdue section (dull red) */}
         {overdueTasks > 0 && (
@@ -105,10 +105,10 @@ export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPie
             strokeWidth={strokeWidth}
             strokeDasharray={overdueStrokeDasharray}
             className="transition-all duration-300 hover:stroke-red-700"
-            style={{ pointerEvents: 'none' }}
+            style={{ pointerEvents: "none" }}
           />
         )}
-        
+
         {/* Remaining section (dull green) */}
         {remainingTasks > 0 && (
           <circle
@@ -121,14 +121,14 @@ export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPie
             strokeDasharray={remainingStrokeDasharray}
             style={{
               transform: `rotate(${remainingRotation}deg)`,
-              transformOrigin: '56px 56px',
-              pointerEvents: 'none'
+              transformOrigin: "56px 56px",
+              pointerEvents: "none",
             }}
             className="transition-all duration-300 hover:stroke-green-700"
           />
         )}
       </svg>
-      
+
       {/* Center text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <div className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-none font-mono">
@@ -140,4 +140,4 @@ export default function TaskPieChart({ uncompletedTasks, overdueTasks }: TaskPie
       </div>
     </div>
   );
-} 
+}

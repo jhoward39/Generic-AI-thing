@@ -1,1 +1,1 @@
-declare module "reactflow"; 
+declare module "reactflow";

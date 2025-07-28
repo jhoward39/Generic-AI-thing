@@ -13,9 +13,9 @@ export async function POST() {
     });
 
     if (tasksWithoutDueDates.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: "No tasks found without due dates",
-        updated: 0 
+        updated: 0,
       });
     }
 
@@ -36,7 +36,7 @@ export async function POST() {
     return NextResponse.json({
       message: `Successfully updated ${tasksWithoutDueDates.length} tasks with default due dates`,
       updated: tasksWithoutDueDates.length,
-      tasks: tasksWithoutDueDates.map(task => ({
+      tasks: tasksWithoutDueDates.map((task) => ({
         id: task.id,
         title: task.title,
         createdAt: task.createdAt,
@@ -45,9 +45,6 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Error migrating due dates:", error);
-    return NextResponse.json(
-      { error: "Error migrating due dates" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error migrating due dates" }, { status: 500 });
   }
-} 
+}

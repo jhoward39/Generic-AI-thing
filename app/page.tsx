@@ -65,19 +65,19 @@ export default function Home() {
   const { uncompletedTasks, overdueTasks } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
-    
-    const uncompleted = todos.filter(todo => !todo.done);
-    
-    const overdue = todos.filter(todo => {
+
+    const uncompleted = todos.filter((todo) => !todo.done);
+
+    const overdue = todos.filter((todo) => {
       if (!todo.dueDate || todo.done) return false;
       const dueDate = new Date(todo.dueDate);
       dueDate.setHours(0, 0, 0, 0);
       return dueDate < today;
     });
-    
+
     return {
       uncompletedTasks: uncompleted.length,
-      overdueTasks: overdue.length
+      overdueTasks: overdue.length,
     };
   }, [todos]);
 
@@ -89,7 +89,7 @@ export default function Home() {
         const prevTodo = prev.find((p) => p.id === t.id);
         if (!prevTodo && t.imageUrl === null) return { ...t, imageUrl: undefined } as Todo;
         return t;
-      })
+      }),
     );
   }, []);
 
@@ -113,25 +113,28 @@ export default function Home() {
     return () => clearInterval(id);
   }, [hasPendingImages, fetchTodos]);
 
-  const handleCreateDependency = async (fromId: number, toId: number): Promise<{ success: boolean; error?: string }> => {
+  const handleCreateDependency = async (
+    fromId: number,
+    toId: number,
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch("/api/todos/dependencies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId: toId, dependsOnId: fromId }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        return { success: false, error: errorData.error || 'Failed to create dependency' };
+        return { success: false, error: errorData.error || "Failed to create dependency" };
       }
-      
+
       fetchTodos();
       fetchDependencyInfo();
       return { success: true };
     } catch (error) {
-      console.error('Network error creating dependency:', error);
-      return { success: false, error: 'Network error occurred' };
+      console.error("Network error creating dependency:", error);
+      return { success: false, error: "Network error occurred" };
     }
   };
 
@@ -149,7 +152,11 @@ export default function Home() {
     await fetch("/api/todos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle, dueDate: newDueDate || null, duration: parseInt(newDuration) || 1 }),
+      body: JSON.stringify({
+        title: newTitle,
+        dueDate: newDueDate || null,
+        duration: parseInt(newDuration) || 1,
+      }),
     });
     setNewTitle("");
     setNewDueDate("");
@@ -161,30 +168,30 @@ export default function Home() {
   // Transform todos to tasks format for VerticalTimeline
   const tasks: Task[] = useMemo(() => {
     const transformedTasks = todos
-      .filter(t => t.dueDate && t.dueDate.trim() !== "")
-      .map(t => ({
-      id: t.id,
-      title: t.title,
-      dueDate: t.dueDate!.split('T')[0], // Ensure YYYY-MM-DD format (strip time if present)
-      createdAt: new Date().toISOString(), // Add createdAt
-      duration: t.duration,
-      earliestStartDate: undefined, // This would come from dependency calculation
-      isOnCriticalPath: t.isOnCriticalPath, // Use actual critical path data from database
-      imageUrl: t.imageUrl,
-      done: t.done, // Add done property
-      dependencies: t.dependencies.map(dep => ({
-        dependsOn: {
-          id: dep.dependsOn.id,
-          title: todos.find(todo => todo.id === dep.dependsOn.id)?.title || 'Unknown'
-        }
-      })),
-      dependentTasks: t.dependentTasks.map(dep => ({
-        task: {
-          id: dep.task.id,
-          title: todos.find(todo => todo.id === dep.task.id)?.title || 'Unknown'
-        }
-      })),
-    }));
+      .filter((t) => t.dueDate && t.dueDate.trim() !== "")
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        dueDate: t.dueDate!.split("T")[0], // Ensure YYYY-MM-DD format (strip time if present)
+        createdAt: new Date().toISOString(), // Add createdAt
+        duration: t.duration,
+        earliestStartDate: undefined, // This would come from dependency calculation
+        isOnCriticalPath: t.isOnCriticalPath, // Use actual critical path data from database
+        imageUrl: t.imageUrl,
+        done: t.done, // Add done property
+        dependencies: t.dependencies.map((dep) => ({
+          dependsOn: {
+            id: dep.dependsOn.id,
+            title: todos.find((todo) => todo.id === dep.dependsOn.id)?.title || "Unknown",
+          },
+        })),
+        dependentTasks: t.dependentTasks.map((dep) => ({
+          task: {
+            id: dep.task.id,
+            title: todos.find((todo) => todo.id === dep.task.id)?.title || "Unknown",
+          },
+        })),
+      }));
     return transformedTasks;
   }, [todos]);
 
@@ -198,7 +205,7 @@ export default function Home() {
     }
   };
 
-  // Transform dependencies 
+  // Transform dependencies
   const dependencies: Dependency[] = useMemo(() => {
     const deps: Dependency[] = [];
     todos.forEach((t) => {
@@ -212,10 +219,7 @@ export default function Home() {
       {/* Project overview pie chart */}
       {dependencyInfo && (
         <div className="absolute top-4 right-4 z-20">
-          <TaskPieChart 
-            uncompletedTasks={uncompletedTasks}
-            overdueTasks={overdueTasks}
-          />
+          <TaskPieChart uncompletedTasks={uncompletedTasks} overdueTasks={overdueTasks} />
         </div>
       )}
 
