@@ -4,6 +4,7 @@ import VerticalTimeline from "./components/VerticalTimeline";
 import CustomCalendar from "./components/CustomCalendar";
 import TaskPieChart from "./components/TaskPieChart";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AIAssistant from "./components/AIAssistant";
 import { TimelineProvider, useTimeline } from "./contexts/TimelineContext";
 import { CONFIG } from "../lib/config";
 
@@ -76,6 +77,9 @@ function HomeContent() {
           />
         </div>
       )}
+
+      {/* AI Assistant Component */}
+      <AIAssistant />
 
       {/* Vertical Timeline */}
       <VerticalTimeline
